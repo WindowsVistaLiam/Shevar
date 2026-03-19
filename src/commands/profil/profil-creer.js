@@ -6,39 +6,60 @@ const {
   ActionRowBuilder
 } = require('discord.js');
 const {
-  getActiveSlot,
   getProfileBySlot,
+  setActiveSlot,
   ensureActiveState
 } = require('../../services/profileService');
+const { getMaxProfileSlotsForMember } = require('../../utils/profileLimits');
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName('profil')
-    .setDescription('Modifier ton profil RP actif'),
+    .setName('profil-creer')
+    .setDescription('Créer un nouveau profil RP dans un slot précis')
+    .addIntegerOption(option =>
+      option
+        .setName('slot')
+        .setDescription('Le slot dans lequel créer le profil')
+        .setRequired(true)
+        .setMinValue(1)
+        .setMaxValue(10)
+    ),
 
   async execute(interaction) {
     await ensureActiveState(interaction.guildId, interaction.user.id);
 
-    const activeSlot = await getActiveSlot(interaction.guildId, interaction.user.id);
-    const existingProfile = await getProfileBySlot(
-      interaction.guildId,
-      interaction.user.id,
-      activeSlot
-    );
+    const slot = interaction.options.getInteger('slot', true);
+    const maxSlots = getMaxProfileSlotsForMember(interaction.member);
 
-    if (!existingProfile) {
+    if (slot > maxSlots) {
       await interaction.reply({
-        content:
-          `Tu n’as pas encore de profil dans ton **slot actif (${activeSlot})**.\n` +
-          `Utilise \`/profil-creer slot:${activeSlot}\` pour le créer, ou \`/profil-switch\` pour changer de slot.`,
+        content: `Tu ne peux pas créer de profil au-delà du **slot ${maxSlots}**.`,
         ephemeral: true
       });
       return;
     }
 
+    const existingProfile = await getProfileBySlot(
+      interaction.guildId,
+      interaction.user.id,
+      slot
+    );
+
+    if (existingProfile) {
+      await interaction.reply({
+        content:
+          `Un profil existe déjà dans le **slot ${slot}**.\n` +
+          `Utilise \`/profil-switch slot:${slot}\` puis \`/profil\` pour le modifier.`,
+        ephemeral: true
+      });
+      return;
+    }
+
+    await setActiveSlot(interaction.guildId, interaction.user.id, slot);
+
     const modal = new ModalBuilder()
-      .setCustomId(`profile_create:${interaction.user.id}:${activeSlot}`)
-      .setTitle(`Modification du profil RP • Slot ${activeSlot}`);
+      .setCustomId(`profile_create:${interaction.user.id}:${slot}`)
+      .setTitle(`Création du profil RP • Slot ${slot}`);
 
     const fullNameInput = new TextInputBuilder()
       .setCustomId('full_name')
@@ -46,8 +67,7 @@ module.exports = {
       .setPlaceholder('Écris ce que tu veux')
       .setStyle(TextInputStyle.Short)
       .setRequired(true)
-      .setMaxLength(200)
-      .setValue(existingProfile.nomPrenom || '');
+      .setMaxLength(200);
 
     const ageGenderInput = new TextInputBuilder()
       .setCustomId('age_gender')
@@ -55,8 +75,7 @@ module.exports = {
       .setPlaceholder('Écris ce que tu veux')
       .setStyle(TextInputStyle.Short)
       .setRequired(true)
-      .setMaxLength(200)
-      .setValue(existingProfile.ageGenre || '');
+      .setMaxLength(200);
 
     const pouvoirInput = new TextInputBuilder()
       .setCustomId('pouvoir')
@@ -64,8 +83,7 @@ module.exports = {
       .setPlaceholder('Écris ce que tu veux')
       .setStyle(TextInputStyle.Paragraph)
       .setRequired(true)
-      .setMaxLength(1000)
-      .setValue(existingProfile.pouvoir || '');
+      .setMaxLength(1000);
 
     const descriptionInput = new TextInputBuilder()
       .setCustomId('description')
@@ -73,8 +91,7 @@ module.exports = {
       .setPlaceholder('Écris ce que tu veux')
       .setStyle(TextInputStyle.Paragraph)
       .setRequired(true)
-      .setMaxLength(4000)
-      .setValue(existingProfile.description || '');
+      .setMaxLength(4000);
 
     const imageInput = new TextInputBuilder()
       .setCustomId('image')
@@ -82,8 +99,7 @@ module.exports = {
       .setPlaceholder('https://...')
       .setStyle(TextInputStyle.Short)
       .setRequired(true)
-      .setMaxLength(1000)
-      .setValue(existingProfile.imageUrl || '');
+      .setMaxLength(1000);
 
     modal.addComponents(
       new ActionRowBuilder().addComponents(fullNameInput),
