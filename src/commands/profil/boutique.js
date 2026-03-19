@@ -1,7 +1,10 @@
 const { SlashCommandBuilder } = require('discord.js');
 const ShopItem = require('../../models/ShopItem');
 const { ITEMS_PER_PAGE, buildShopEmbed } = require('../../utils/shopEmbeds');
-const { buildShopNavigationRow } = require('../../utils/shopComponents');
+const {
+  buildShopNavigationRow,
+  buildShopCategoryRow
+} = require('../../utils/shopComponents');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -16,24 +19,33 @@ module.exports = {
     ),
 
   async execute(interaction) {
-    const category = interaction.options.getString('categorie');
+    const requestedCategory = interaction.options.getString('categorie');
 
-    const query = {
+    const allActiveItems = await ShopItem.find({
       guildId: interaction.guildId,
       isActive: true
-    };
+    }).sort({ category: 1, name: 1 }).lean();
 
-    if (category) {
-      query.category = category;
+    if (allActiveItems.length === 0) {
+      await interaction.reply({
+        content: 'Aucun article actif en boutique.',
+        ephemeral: true
+      });
+      return;
     }
 
-    const items = await ShopItem.find(query).sort({ category: 1, name: 1 }).lean();
+    const categories = [...new Set(allActiveItems.map(item => item.category).filter(Boolean))];
+    const category = requestedCategory && categories.includes(requestedCategory)
+      ? requestedCategory
+      : 'all';
+
+    const items = category === 'all'
+      ? allActiveItems
+      : allActiveItems.filter(item => item.category === category);
 
     if (items.length === 0) {
       await interaction.reply({
-        content: category
-          ? `Aucun article actif dans la catégorie **${category}**.`
-          : 'Aucun article actif en boutique.',
+        content: `Aucun article actif dans la catégorie **${requestedCategory}**.`,
         ephemeral: true
       });
       return;
@@ -46,11 +58,14 @@ module.exports = {
       items,
       page,
       totalPages,
-      category,
+      category: category === 'all' ? null : category,
       guildName: interaction.guild?.name || 'Serveur RP'
     });
 
-    const components = [buildShopNavigationRow(page, totalPages, category || 'all')];
+    const components = [
+      buildShopCategoryRow(categories, category),
+      buildShopNavigationRow(page, totalPages, category)
+    ];
 
     await interaction.reply({
       embeds: [embed],

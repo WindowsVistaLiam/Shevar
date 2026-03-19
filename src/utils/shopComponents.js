@@ -1,4 +1,9 @@
-const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  StringSelectMenuBuilder
+} = require('discord.js');
 
 function buildShopNavigationRow(page, totalPages, category = 'all') {
   return new ActionRowBuilder().addComponents(
@@ -22,6 +27,29 @@ function buildShopNavigationRow(page, totalPages, category = 'all') {
   );
 }
 
+function buildShopCategoryRow(categories = [], selectedCategory = 'all') {
+  const options = [
+    {
+      label: 'Toutes les catégories',
+      value: 'all',
+      default: selectedCategory === 'all'
+    },
+    ...categories.slice(0, 24).map(category => ({
+      label: category,
+      value: category,
+      default: selectedCategory === category
+    }))
+  ];
+
+  const select = new StringSelectMenuBuilder()
+    .setCustomId(`shop_category:${selectedCategory}`)
+    .setPlaceholder('Choisir une catégorie')
+    .addOptions(options);
+
+  return new ActionRowBuilder().addComponents(select);
+}
+
 module.exports = {
-  buildShopNavigationRow
+  buildShopNavigationRow,
+  buildShopCategoryRow
 };
