@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const { getAllProfiles, getActiveSlot } = require('../../services/profileService');
 const { isMj, isAdmin } = require('../../utils/profileLimits');
 
@@ -6,16 +6,15 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('lister-profils')
     .setDescription('Lister les profils d’un joueur')
-    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .addUserOption(option =>
       option
         .setName('utilisateur')
         .setDescription('Le joueur ciblé')
-        .setRequired(true)
+        .setRequired(false)
     ),
 
   async execute(interaction) {
-    const targetUser = interaction.options.getUser('utilisateur', true);
+    const targetUser = interaction.options.getUser('utilisateur') || interaction.user;
 
     const profiles = await getAllProfiles(interaction.guildId, targetUser.id);
     const activeSlot = await getActiveSlot(interaction.guildId, targetUser.id);
