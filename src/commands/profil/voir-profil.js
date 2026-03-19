@@ -1,8 +1,11 @@
 const { SlashCommandBuilder } = require('discord.js');
 const Profile = require('../../models/Profile');
 const { buildProfileEmbed } = require('../../utils/profileEmbeds');
-const { buildProfileNavigationRow } = require('../../utils/profileComponents');
-const { getActiveSlot } = require('../../services/profileService');
+const {
+  buildProfileNavigationRow,
+  buildProfileSlotRow
+} = require('../../utils/profileComponents');
+const { getActiveSlot, getAllProfiles } = require('../../services/profileService');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -45,12 +48,17 @@ module.exports = {
       return;
     }
 
+    const allProfiles = await getAllProfiles(interaction.guildId, targetUser.id);
+    const existingSlots = allProfiles.map(entry => entry.slot);
+
     const embed = buildProfileEmbed(profile, targetUser, interaction.guild, 1);
-    const components = [buildProfileNavigationRow(targetUser.id, targetSlot, 1)];
 
     await interaction.reply({
       embeds: [embed],
-      components
+      components: [
+        buildProfileSlotRow(targetUser.id, targetSlot, existingSlots),
+        buildProfileNavigationRow(targetUser.id, targetSlot, 1)
+      ]
     });
   }
 };

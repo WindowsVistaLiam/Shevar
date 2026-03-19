@@ -61,9 +61,10 @@ function buildProfileEmbed(profile, targetUser, guild, page = 1) {
   const rpActions = Number(profile.rpActionsCount) || 0;
   const wallet = Number(profile.wallet) || 0;
   const color = getSouillureColor(souillure);
+  const slot = profile.slot || 1;
 
   const baseFooter = {
-    text: `${guild?.name || 'Serveur RP'} • Profil de ${targetUser.username} • Page ${page}/3`
+    text: `${guild?.name || 'Serveur RP'} • Profil de ${targetUser.username} • Slot ${slot} • Page ${page}/3`
   };
 
   if (page === 1) {
@@ -73,25 +74,25 @@ function buildProfileEmbed(profile, targetUser, guild, page = 1) {
         name: `Dossier de ${targetUser.username}`,
         iconURL: targetUser.displayAvatarURL({ size: 256 })
       })
-      .setTitle(profile.nomPrenom || 'Personnage sans nom')
+      .setTitle(`${profile.nomPrenom || 'Personnage sans nom'} • Slot ${slot}`)
       .addFields(
         {
-          name: '👤┈┈┈┈  Identité',
+          name: '👤 Identité',
           value: profile.nomPrenom || 'Non renseigné',
           inline: false
         },
         {
-          name: '🎭┈┈┈┈  Âge / Genre',
+          name: '🎭 Âge / Genre',
           value: profile.ageGenre || 'Non renseigné',
           inline: false
         },
         {
-          name: '🔮┈┈┈┈  Pouvoir / Aptitude',
+          name: '🔮 Pouvoir / Aptitude',
           value: truncate(profile.pouvoir || 'Non renseigné', 1024),
           inline: false
         },
         {
-          name: '🪞┈┈┈┈  Description',
+          name: '🪞 Description',
           value: truncate(profile.description || 'Aucune description.', 1024),
           inline: false
         }
@@ -114,25 +115,25 @@ function buildProfileEmbed(profile, targetUser, guild, page = 1) {
         name: `Détails complémentaires de ${targetUser.username}`,
         iconURL: targetUser.displayAvatarURL({ size: 256 })
       })
-      .setTitle(`📚┈┈┈┈  Fiche annexe — ${profile.nomPrenom || targetUser.username}`)
+      .setTitle(`📚 Fiche annexe — ${profile.nomPrenom || targetUser.username} • Slot ${slot}`)
       .addFields(
         {
-          name: '💼┈┈┈┈  Métier',
+          name: '💼 Métier',
           value: profile.metier || 'Sans métier',
           inline: false
         },
         {
-          name: '☣️┈┈┈┈  Souillure',
+          name: '🕯️ Souillure',
           value: `${buildSouillureBar(souillure)}\n${getSouillureState(souillure)}`,
           inline: false
         },
         {
-          name: '👁️┈┈┈┈  Présence',
+          name: '👁️ Présence',
           value: getPresenceText(souillure),
           inline: false
         },
         {
-          name: '📈┈┈┈┈  Progression RP',
+          name: '📈 Progression RP',
           value: [
             `**Actions RP validées :** ${rpActions}`,
             `**Avant le prochain palier :** ${Math.max(0, 20 - (rpActions % 20))} action(s)`
@@ -140,7 +141,7 @@ function buildProfileEmbed(profile, targetUser, guild, page = 1) {
           inline: false
         },
         {
-          name: '🗂️┈┈┈┈  Archive',
+          name: '🗂️ Archive',
           value: [
             `**Créé le :** <t:${Math.floor(new Date(profile.createdAt).getTime() / 1000)}:D>`,
             `**Dernière mise à jour :** <t:${Math.floor(new Date(profile.updatedAt).getTime() / 1000)}:R>`
@@ -158,15 +159,15 @@ function buildProfileEmbed(profile, targetUser, guild, page = 1) {
       name: `Inventaire de ${targetUser.username}`,
       iconURL: targetUser.displayAvatarURL({ size: 256 })
     })
-    .setTitle(`🎒┈┈┈┈  Inventaire & Portefeuille — ${profile.nomPrenom || targetUser.username}`)
+    .setTitle(`🎒 Inventaire & Portefeuille — ${profile.nomPrenom || targetUser.username} • Slot ${slot}`)
     .addFields(
       {
-        name: '💰┈┈┈┈  Portefeuille',
+        name: '💰 Portefeuille',
         value: `**${wallet}** pièces`,
         inline: false
       },
       {
-        name: '🎒┈┈┈┈  Inventaire',
+        name: '🎒 Inventaire',
         value: truncate(formatInventory(profile.inventory), 1024),
         inline: false
       }

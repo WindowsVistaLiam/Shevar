@@ -1,6 +1,10 @@
 const Profile = require('../models/Profile');
 const { buildProfileEmbed } = require('../utils/profileEmbeds');
-const { buildProfileNavigationRow } = require('../utils/profileComponents');
+const {
+  buildProfileNavigationRow,
+  buildProfileSlotRow
+} = require('../utils/profileComponents');
+const { getAllProfiles } = require('../services/profileService');
 
 module.exports = function registerProfileNavigation(client) {
   client.on('interactionCreate', async interaction => {
@@ -8,7 +12,8 @@ module.exports = function registerProfileNavigation(client) {
     if (
       !interaction.customId.startsWith('profile_page:') &&
       !interaction.customId.startsWith('profile_prev:') &&
-      !interaction.customId.startsWith('profile_next:')
+      !interaction.customId.startsWith('profile_next:') &&
+      !interaction.customId.startsWith('profile_slot:')
     ) {
       return;
     }
@@ -24,6 +29,7 @@ module.exports = function registerProfileNavigation(client) {
       if (action === 'profile_prev') page = Math.max(1, page - 1);
       if (action === 'profile_next') page = Math.min(3, page + 1);
       if (action === 'profile_page') page = Math.min(3, Math.max(1, Number(parts[3]) || 1));
+      if (action === 'profile_slot') page = 1;
 
       const targetUser = await client.users.fetch(targetUserId).catch(() => null);
 
@@ -49,12 +55,17 @@ module.exports = function registerProfileNavigation(client) {
         return;
       }
 
+      const allProfiles = await getAllProfiles(interaction.guildId, targetUserId);
+      const existingSlots = allProfiles.map(entry => entry.slot);
+
       const embed = buildProfileEmbed(profile, targetUser, interaction.guild, page);
-      const components = [buildProfileNavigationRow(targetUserId, slot, page)];
 
       await interaction.update({
         embeds: [embed],
-        components
+        components: [
+          buildProfileSlotRow(targetUserId, slot, existingSlots),
+          buildProfileNavigationRow(targetUserId, slot, page)
+        ]
       });
     } catch (error) {
       console.error('❌ Erreur navigation profil :', error);
