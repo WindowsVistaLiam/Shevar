@@ -31,6 +31,45 @@ function buildProfileNavigationRow(targetUserId, slot, currentPage) {
   );
 }
 
+function buildProfileSlotRow(targetUserId, currentSlot, existingSlots = []) {
+  const sortedSlots = [...existingSlots].sort((a, b) => a - b);
+  const currentIndex = sortedSlots.indexOf(currentSlot);
+
+  const previousSlot = currentIndex > 0 ? sortedSlots[currentIndex - 1] : null;
+  const nextSlot = currentIndex >= 0 && currentIndex < sortedSlots.length - 1
+    ? sortedSlots[currentIndex + 1]
+    : null;
+
+  return new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(
+        previousSlot
+          ? `profile_slot:${targetUserId}:${previousSlot}:1`
+          : `profile_slot_disabled_prev:${targetUserId}:${currentSlot}:1`
+      )
+      .setLabel('Slot précédent')
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(!previousSlot),
+
+    new ButtonBuilder()
+      .setCustomId(`profile_slot_current:${targetUserId}:${currentSlot}:1`)
+      .setLabel(`Slot ${currentSlot}`)
+      .setStyle(ButtonStyle.Primary)
+      .setDisabled(true),
+
+    new ButtonBuilder()
+      .setCustomId(
+        nextSlot
+          ? `profile_slot:${targetUserId}:${nextSlot}:1`
+          : `profile_slot_disabled_next:${targetUserId}:${currentSlot}:1`
+      )
+      .setLabel('Slot suivant')
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(!nextSlot)
+  );
+}
+
 module.exports = {
-  buildProfileNavigationRow
+  buildProfileNavigationRow,
+  buildProfileSlotRow
 };

@@ -1,23 +1,16 @@
-const { SlashCommandBuilder } = require('discord.js');
-const Profile = require('../../models/Profile');
-const {
-  getAllProfiles,
-  getActiveSlot,
-  setActiveSlot
-} = require('../../services/profileService');
-const { getMaxProfileSlotsForMember } = require('../../utils/profileLimits');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { getAllProfiles, getActiveSlot } = require('../../services/profileService');
+const { isMj, isAdmin } = require('../../utils/profileLimits');
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName('profil-supprimer')
-    .setDescription('Supprimer l’un de tes profils RP')
-    .addIntegerOption(option =>
+    .setName('lister-profils')
+    .setDescription('Lister les profils d’un joueur')
+    .addUserOption(option =>
       option
-        .setName('slot')
-        .setDescription('Le slot du profil à supprimer')
-        .setRequired(true)
-        .setMinValue(1)
-        .setMaxValue(10)
+        .setName('utilisateur')
+        .setDescription('Le joueur ciblé')
+        .setRequired(false)
     ),
 
   async execute(interaction) {
