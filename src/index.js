@@ -5,6 +5,7 @@ const path = require('path');
 const { Client, Collection, GatewayIntentBits, Partials } = require('discord.js');
 const { connectDatabase } = require('./config/database');
 const registerModals = require('./events/registerModals');
+const registerProfileNavigation = require('./events/registerProfileNavigation');
 
 const client = new Client({
   intents: [
@@ -51,7 +52,10 @@ const eventsPath = path.join(__dirname, 'events');
 
 if (fs.existsSync(eventsPath)) {
   const eventFiles = fs.readdirSync(eventsPath).filter(
-    file => file.endsWith('.js') && file !== 'registerModals.js'
+    file =>
+      file.endsWith('.js') &&
+      file !== 'registerModals.js' &&
+      file !== 'registerProfileNavigation.js'
   );
 
   for (const file of eventFiles) {
@@ -67,6 +71,7 @@ if (fs.existsSync(eventsPath)) {
 }
 
 registerModals(client);
+registerProfileNavigation(client);
 
 (async () => {
   await connectDatabase();

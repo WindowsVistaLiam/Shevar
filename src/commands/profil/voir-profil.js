@@ -1,6 +1,7 @@
 const { SlashCommandBuilder } = require('discord.js');
 const Profile = require('../../models/Profile');
-const { buildProfileEmbeds } = require('../../utils/profileEmbeds');
+const { buildProfileEmbed } = require('../../utils/profileEmbeds');
+const { buildProfileNavigationRow } = require('../../utils/profileComponents');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -32,10 +33,12 @@ module.exports = {
       return;
     }
 
-    const embeds = buildProfileEmbeds(profile, targetUser, interaction.guild);
+    const embed = buildProfileEmbed(profile, targetUser, interaction.guild, 1);
+    const components = [buildProfileNavigationRow(targetUser.id, 1)];
 
     await interaction.reply({
-      embeds
+      embeds: [embed],
+      components
     });
   }
 };
