@@ -47,7 +47,7 @@ const SOUILLURE_STAGES = [
     gifUrl: 'https://media.discordapp.net/attachments/1473976944835035289/1484939493302603807/Made_in_abyss.gif?ex=69c00d2c&is=69bebbac&hm=508171121e777f65109990d70e24a4f9e82004acab6034e3b35d7a8f09c31f84&=&width=623&height=350'
   },
   {
-    max: 100,
+    max: 99,
     label: "La réalité elle-même semble se déformer, ce personnage n'est plus que l'ombre de lui-même.",
     gifUrl: 'https://media.discordapp.net/attachments/1473976944835035289/1484967327933141052/Devil_may_cry_bby.gif?ex=69c02718&is=69bed598&hm=f9326e16a5e3355d24797e083269df1aac86e5cc771d0c31bc42712ca22a98c2&=&width=675&height=350'
   }
