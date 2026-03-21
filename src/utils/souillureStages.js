@@ -42,12 +42,12 @@ const SOUILLURE_STAGES = [
     gifUrl: 'https://media.discordapp.net/attachments/1473976944835035289/1484969595285671966/ezgif.com-video-to-gif-converter_2.gif?ex=69c02934&is=69bed7b4&hm=998747dd90b1a27435c7d7d317eb8cba449540d0385d79808be220986dfa3e19&=&width=1000&height=563'
   },
   {
-    max: 90,
+    max: 99.99,
     label: 'Phase de non retour amorcée.',
     gifUrl: 'https://media.discordapp.net/attachments/1473976944835035289/1484939493302603807/Made_in_abyss.gif?ex=69c00d2c&is=69bebbac&hm=508171121e777f65109990d70e24a4f9e82004acab6034e3b35d7a8f09c31f84&=&width=623&height=350'
   },
   {
-    max: 99,
+    max: 100,
     label: "La réalité elle-même semble se déformer, ce personnage n'est plus que l'ombre de lui-même.",
     gifUrl: 'https://media.discordapp.net/attachments/1473976944835035289/1484967327933141052/Devil_may_cry_bby.gif?ex=69c02718&is=69bed598&hm=f9326e16a5e3355d24797e083269df1aac86e5cc771d0c31bc42712ca22a98c2&=&width=675&height=350'
   }
@@ -55,7 +55,6 @@ const SOUILLURE_STAGES = [
 
 function getSouillureStageIndex(value = 0) {
   const souillure = Math.max(0, Math.min(100, Number(value) || 0));
-
   return SOUILLURE_STAGES.findIndex(stage => souillure <= stage.max);
 }
 
@@ -70,23 +69,16 @@ function buildSouillureStageEmbed({ profile, user, souillure }) {
   return new EmbedBuilder()
     .setColor(0xc0392b)
     .setTitle('🩸 La Souillure évolue')
-
     .setDescription(
       `**${profile.nomPrenom || user.username}** franchit un nouveau seuil...\n\n` +
       `**État :** ${stage.label}\n` +
       `**Souillure :** ${souillure}%`
     )
-
-    // Avatar Discord
     .setThumbnail(user.displayAvatarURL({ dynamic: true }))
-
-    // Image principale : GIF du palier OU image du perso
-    .setImage(profile.image || stage.gifUrl)
-
+    .setImage(profile.imageUrl || stage.gifUrl)
     .setFooter({
       text: `Slot ${profile.slot} • ${user.username}`
     })
-
     .setTimestamp();
 }
 
