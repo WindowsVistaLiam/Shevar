@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
 const { getAllProfiles, getActiveSlot } = require('../../services/profileService');
 const { isMj, isAdmin } = require('../../utils/profileLimits');
 
@@ -14,52 +14,61 @@ module.exports = {
     ),
 
   async execute(interaction) {
-    const slot = interaction.options.getInteger('slot', true);
-    const maxSlots = getMaxProfileSlotsForMember(interaction.member);
+    const targetUser = interaction.options.getUser('utilisateur') || interaction.user;
 
-    if (slot > maxSlots) {
+    const profiles = await getAllProfiles(interaction.guildId, targetUser.id);
+    const activeSlot = await getActiveSlot(interaction.guildId, targetUser.id);
+
+    if (profiles.length === 0) {
       await interaction.reply({
-        content: `Tu n’as pas accès au **slot ${slot}**.`,
-        ephemeral: true
+        content: `**${targetUser.username}** n’a aucun profil enregistré.`,
+        flags: MessageFlags.Ephemeral
       });
       return;
     }
 
-    const profile = await Profile.findOne({
-      guildId: interaction.guildId,
-      userId: interaction.user.id,
-      slot
+    const targetMember = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
+
+    const lines = profiles.map(profile => {
+      const isActive = profile.slot === activeSlot ? '✅' : '•';
+      const name = profile.nomPrenom || 'Sans nom';
+      return `${isActive} **Slot ${profile.slot}** — ${name}`;
     });
 
-    if (!profile) {
-      await interaction.reply({
-        content: `Tu n’as aucun profil dans le **slot ${slot}**.`,
-        ephemeral: true
-      });
-      return;
-    }
-
-    const activeSlot = await getActiveSlot(interaction.guildId, interaction.user.id);
-
-    await Profile.deleteOne({
-      guildId: interaction.guildId,
-      userId: interaction.user.id,
-      slot
-    });
-
-    const remainingProfiles = await getAllProfiles(interaction.guildId, interaction.user.id);
-
-    if (remainingProfiles.length === 0) {
-      await setActiveSlot(interaction.guildId, interaction.user.id, 1);
-    } else if (activeSlot === slot) {
-      await setActiveSlot(interaction.guildId, interaction.user.id, remainingProfiles[0].slot);
-    }
+    const embed = new EmbedBuilder()
+      .setTitle(`📚 Profils de ${targetUser.username}`)
+      .setThumbnail(targetUser.displayAvatarURL({ size: 256 }))
+      .setDescription(lines.join('\n'))
+      .addFields(
+        {
+          name: '🎯 Profil actif',
+          value: `Slot **${activeSlot}**`,
+          inline: true
+        },
+        {
+          name: '🧩 Statut',
+          value: targetMember
+            ? isAdmin(targetMember)
+              ? 'Administrateur'
+              : isMj(targetMember)
+                ? 'MJ'
+                : 'Joueur'
+            : 'Inconnu',
+          inline: true
+        },
+        {
+          name: '📦 Limite autorisée',
+          value: targetMember
+            ? (isAdmin(targetMember) || isMj(targetMember) ? '**10 profils**' : '**3 profils**')
+            : '**3 profils**',
+          inline: true
+        }
+      )
+      .setTimestamp();
 
     await interaction.reply({
-      content:
-        `✅ Ton profil du **slot ${slot}** a bien été supprimé.\n` +
-        `Nom du profil supprimé : **${profile.nomPrenom || 'Sans nom'}**`,
-      ephemeral: true
+      embeds: [embed],
+      flags: MessageFlags.Ephemeral
     });
   }
 };
