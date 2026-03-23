@@ -4,7 +4,7 @@ const { getTitleRarityDisplay } = require('./titleUtils');
 function truncate(text, maxLength) {
   if (!text) return 'Non renseigné';
   if (text.length <= maxLength) return text;
-  return text.slice(0, maxLength - 3) + '...';
+  return `${text.slice(0, maxLength - 3)}...`;
 }
 
 function buildSouillureBar(percent = 0) {
@@ -12,13 +12,11 @@ function buildSouillureBar(percent = 0) {
   const totalBars = 10;
   const filledBars = Math.round(safe / 10);
   const emptyBars = totalBars - filledBars;
-
   return `${'█'.repeat(filledBars)}${'░'.repeat(emptyBars)} ${safe}%`;
 }
 
 function getSouillureState(percent = 0) {
   const value = Number(percent) || 0;
-
   if (value <= 0) return 'Pureté apparente';
   if (value <= 10) return 'Frémissement léger';
   if (value <= 20) return 'Frémissement intense';
@@ -48,7 +46,6 @@ function getPresenceText(souillure = 0) {
 
 function getSouillureColor(percent = 0) {
   const value = Number(percent) || 0;
-
   if (value <= 20) return 0x95a5a6;
   if (value <= 40) return 0x8e44ad;
   if (value <= 60) return 0x7d3c98;
@@ -80,7 +77,6 @@ function getEquippedTitleDisplay(profile) {
     if (typeof title === 'string') {
       return title === profile.equippedTitle;
     }
-
     return title.name === profile.equippedTitle;
   });
 
@@ -88,13 +84,58 @@ function getEquippedTitleDisplay(profile) {
     return profile.equippedTitle;
   }
 
-  // Ancien format : ["Mon titre"]
   if (typeof equipped === 'string') {
     return getTitleRarityDisplay(equipped, 'common');
   }
 
-  // Nouveau format : [{ name, rarity }]
   return getTitleRarityDisplay(equipped.name, equipped.rarity || 'common');
+}
+
+function formatRelationType(type = 'autre') {
+  const labels = {
+    allie: 'Allié',
+    rival: 'Rival',
+    famille: 'Famille',
+    mentor: 'Mentor',
+    disciple: 'Disciple',
+    amour: 'Amour',
+    haine: 'Haine',
+    neutre: 'Neutre',
+    autre: 'Autre'
+  };
+
+  return labels[type] || 'Autre';
+}
+
+function buildRelationsSummary(relations = []) {
+  if (!Array.isArray(relations) || relations.length === 0) {
+    return 'Aucune relation connue.';
+  }
+
+  const sorted = [...relations]
+    .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
+  const preview = sorted.slice(0, 4).map(relation => {
+    const targetName =
+      relation.targetProfileNameSnapshot ||
+      `Utilisateur ${relation.targetUserId} • Slot ${relation.targetSlot || 1}`;
+
+    return `• **${formatRelationType(relation.type)}** — ${truncate(targetName, 60)}`;
+  });
+
+  const remaining = sorted.length - preview.length;
+  if (remaining > 0) {
+    preview.push(`• … et **${remaining}** autre(s)`);
+  }
+
+  return truncate(preview.join('\n'), 1024);
+}
+
+function formatDate(date) {
+  if (!date) return 'Inconnue';
+  const parsed = new Date(date);
+  if (Number.isNaN(parsed.getTime())) return 'Inconnue';
+  return parsed.toLocaleString('fr-FR');
 }
 
 function buildProfileEmbed(profile, targetUser, guild, page = 1) {
@@ -119,23 +160,28 @@ function buildProfileEmbed(profile, targetUser, guild, page = 1) {
       .setTitle(`${profile.nomPrenom || 'Personnage sans nom'} • Slot ${slot}`)
       .addFields(
         {
-          name: '👤 Identité',
+          name: 'Identité',
           value: profile.nomPrenom || 'Non renseigné',
           inline: false
         },
         {
-          name: '🎭 Âge / Genre',
+          name: 'Âge / Genre',
           value: profile.ageGenre || 'Non renseigné',
           inline: false
         },
         {
-          name: '🔮 Pouvoir / Aptitude',
+          name: 'Pouvoir / Aptitude',
           value: truncate(profile.pouvoir || 'Non renseigné', 1024),
           inline: false
         },
         {
-          name: '🪞 Description',
+          name: 'Description',
           value: truncate(profile.description || 'Aucune description.', 1024),
+          inline: false
+        },
+        {
+          name: 'Relations',
+          value: buildRelationsSummary(profile.relations || []),
           inline: false
         }
       )
@@ -157,30 +203,30 @@ function buildProfileEmbed(profile, targetUser, guild, page = 1) {
         name: `Détails complémentaires de ${targetUser.username}`,
         iconURL: targetUser.displayAvatarURL({ size: 256 })
       })
-      .setTitle(`📚 Fiche annexe — ${profile.nomPrenom || targetUser.username} • Slot ${slot}`)
+      .setTitle(`Fiche annexe — ${profile.nomPrenom || targetUser.username} • Slot ${slot}`)
       .addFields(
         {
-          name: '💼 Métier',
+          name: 'Métier',
           value: profile.metier || 'Sans métier',
           inline: false
         },
         {
-          name: '🏅 Titre équipé',
+          name: 'Titre équipé',
           value: getEquippedTitleDisplay(profile),
           inline: false
         },
         {
-          name: '🕯️ Souillure',
+          name: 'Souillure',
           value: `${buildSouillureBar(souillure)}\n${getSouillureState(souillure)}`,
           inline: false
         },
         {
-          name: '👁️ Présence',
+          name: 'Présence',
           value: getPresenceText(souillure),
           inline: false
         },
         {
-          name: '📈 Progression RP',
+          name: 'Progression RP',
           value: [
             `**Niveau RP :** ${rpLevel}`,
             `**Messages RP validés :** ${rpMessages}`,
@@ -189,10 +235,10 @@ function buildProfileEmbed(profile, targetUser, guild, page = 1) {
           inline: false
         },
         {
-          name: '🗂️ Archive',
+          name: 'Archive',
           value: [
-            `**Créé le :** <t:${Math.floor(new Date(profile.createdAt).getTime() / 1000)}:D>`,
-            `**Dernière mise à jour :** <t:${Math.floor(new Date(profile.updatedAt).getTime() / 1000)}:R>`
+            `**Créé le :** ${formatDate(profile.createdAt)}`,
+            `**Dernière mise à jour :** ${formatDate(profile.updatedAt)}`
           ].join('\n'),
           inline: false
         }
@@ -207,15 +253,15 @@ function buildProfileEmbed(profile, targetUser, guild, page = 1) {
       name: `Inventaire de ${targetUser.username}`,
       iconURL: targetUser.displayAvatarURL({ size: 256 })
     })
-    .setTitle(`🎒 Inventaire & Portefeuille — ${profile.nomPrenom || targetUser.username} • Slot ${slot}`)
+    .setTitle(`Inventaire & Portefeuille — ${profile.nomPrenom || targetUser.username} • Slot ${slot}`)
     .addFields(
       {
-        name: '💰 Portefeuille',
+        name: 'Portefeuille',
         value: `**${wallet}** pièces`,
         inline: false
       },
       {
-        name: '🎒 Inventaire',
+        name: 'Inventaire',
         value: truncate(formatInventory(profile.inventory), 1024),
         inline: false
       }

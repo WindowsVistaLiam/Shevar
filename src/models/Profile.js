@@ -2,25 +2,15 @@ const mongoose = require('mongoose');
 
 const inventoryItemSchema = new mongoose.Schema(
   {
-    name: {
-      type: String,
-      required: true
-    },
-    quantity: {
-      type: Number,
-      default: 1,
-      min: 1
-    }
+    name: { type: String, required: true },
+    quantity: { type: Number, default: 1, min: 1 }
   },
   { _id: false }
 );
 
 const titleSchema = new mongoose.Schema(
   {
-    name: {
-      type: String,
-      required: true
-    },
+    name: { type: String, required: true },
     rarity: {
       type: String,
       enum: ['common', 'rare', 'epic', 'legendary'],
@@ -30,86 +20,52 @@ const titleSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const relationSchema = new mongoose.Schema(
+  {
+    targetUserId: { type: String, required: true },
+    targetSlot: { type: Number, required: true, min: 1, max: 10 },
+    targetProfileNameSnapshot: { type: String, default: '' },
+    type: {
+      type: String,
+      enum: ['allie', 'rival', 'famille', 'mentor', 'disciple', 'amour', 'haine', 'neutre', 'autre'],
+      default: 'autre'
+    },
+    description: { type: String, default: '', maxlength: 300 },
+    createdAt: { type: Date, default: Date.now }
+  },
+  { _id: true }
+);
+
 const profileSchema = new mongoose.Schema(
   {
-    guildId: {
-      type: String,
-      required: true,
-      index: true
-    },
-    userId: {
-      type: String,
-      required: true,
-      index: true
-    },
-    slot: {
-      type: Number,
-      required: true,
-      min: 1,
-      max: 10
-    },
-    nomPrenom: {
-      type: String,
-      default: ''
-    },
-    ageGenre: {
-      type: String,
-      default: ''
-    },
-    pouvoir: {
-      type: String,
-      default: ''
-    },
-    description: {
-      type: String,
-      default: ''
-    },
-    imageUrl: {
-      type: String,
-      default: ''
-    },
-    metier: {
-      type: String,
-      default: 'Sans métier'
-    },
-    equippedTitle: {
-      type: String,
-      default: ''
-    },
-    titles: {
-      type: [titleSchema],
+    guildId: { type: String, required: true, index: true },
+    userId: { type: String, required: true, index: true },
+    slot: { type: Number, required: true, min: 1, max: 10 },
+
+    nomPrenom: { type: String, default: '' },
+    ageGenre: { type: String, default: '' },
+    pouvoir: { type: String, default: '' },
+    description: { type: String, default: '' },
+    imageUrl: { type: String, default: '' },
+    metier: { type: String, default: 'Sans métier' },
+
+    equippedTitle: { type: String, default: '' },
+    titles: { type: [titleSchema], default: [] },
+
+    rpMessages: { type: Number, default: 0, min: 0 },
+    rpLevel: { type: Number, default: 1, min: 1, max: 50 },
+
+    wallet: { type: Number, default: 0, min: 0 },
+    inventory: { type: [inventoryItemSchema], default: [] },
+
+    souillure: { type: Number, default: 0, min: 0, max: 100 },
+
+    relations: {
+      type: [relationSchema],
       default: []
-    },
-    rpMessages: {
-      type: Number,
-      default: 0,
-      min: 0
-    },
-    rpLevel: {
-      type: Number,
-      default: 1,
-      min: 1,
-      max: 50
-    },
-    wallet: {
-      type: Number,
-      default: 0,
-      min: 0
-    },
-    inventory: {
-      type: [inventoryItemSchema],
-      default: []
-    },
-    souillure: {
-      type: Number,
-      default: 0,
-      min: 0,
-      max: 100
     }
   },
-  {
-    timestamps: true
-  }
+  { timestamps: true }
 );
 
 profileSchema.index({ guildId: 1, userId: 1, slot: 1 }, { unique: true });
