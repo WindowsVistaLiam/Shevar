@@ -107,7 +107,7 @@ module.exports = function registerTradeInteractions(client) {
         await interaction.update({
           content:
             `✅ Échange accepté.\n` +
-            `**${trade.amount}** pièces ont été transférées du **slot ${trade.senderSlot}** de <@${trade.senderId}> ` +
+            `**${trade.amount}** Crawns ont été transférées du **slot ${trade.senderSlot}** de <@${trade.senderId}> ` +
             `vers le **slot ${trade.receiverSlot}** de <@${trade.receiverId}>.`,
           components: []
         });

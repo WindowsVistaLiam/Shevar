@@ -44,15 +44,6 @@ function getPresenceText(souillure = 0) {
   return "La réalité elle-même semble se déformer, ce personnage n'est plus que l'ombre de lui-même.";
 }
 
-function getSouillureColor(percent = 0) {
-  const value = Number(percent) || 0;
-  if (value <= 20) return 0x95a5a6;
-  if (value <= 40) return 0x8e44ad;
-  if (value <= 60) return 0x7d3c98;
-  if (value <= 80) return 0xc0392b;
-  return 0x7f0000;
-}
-
 function formatInventory(inventory = []) {
   if (!Array.isArray(inventory) || inventory.length === 0) {
     return 'Aucun objet.';
@@ -112,8 +103,9 @@ function buildRelationsSummary(relations = []) {
     return 'Aucune relation connue.';
   }
 
-  const sorted = [...relations]
-    .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+  const sorted = [...relations].sort(
+    (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
+  );
 
   const preview = sorted.slice(0, 4).map(relation => {
     const targetName =
@@ -138,12 +130,24 @@ function formatDate(date) {
   return parsed.toLocaleString('fr-FR');
 }
 
+function getPageColor(page, souillure = 0) {
+  if (page === 1) return 0x3498db;
+  if (page === 2) return 0x9b59b6;
+  if (page === 3) return 0x2ecc71;
+
+  if (souillure <= 20) return 0x95a5a6;
+  if (souillure <= 40) return 0x8e44ad;
+  if (souillure <= 60) return 0x7d3c98;
+  if (souillure <= 80) return 0xc0392b;
+  return 0x7f0000;
+}
+
 function buildProfileEmbed(profile, targetUser, guild, page = 1) {
   const souillure = Number(profile.souillure) || 0;
   const wallet = Number(profile.wallet) || 0;
   const rpMessages = Number(profile.rpMessages) || 0;
   const rpLevel = Number(profile.rpLevel) || 1;
-  const color = getSouillureColor(souillure);
+  const color = getPageColor(page, souillure);
   const slot = profile.slot || 1;
 
   const baseFooter = {
@@ -154,33 +158,33 @@ function buildProfileEmbed(profile, targetUser, guild, page = 1) {
     const embed = new EmbedBuilder()
       .setColor(color)
       .setAuthor({
-        name: `Dossier de ${targetUser.username}`,
+        name: `📘 Dossier de ${targetUser.username}`,
         iconURL: targetUser.displayAvatarURL({ size: 256 })
       })
-      .setTitle(`${profile.nomPrenom || 'Personnage sans nom'} • Slot ${slot}`)
+      .setTitle(`✨ ${profile.nomPrenom || 'Personnage sans nom'} • Slot ${slot}`)
       .addFields(
         {
-          name: 'Identité',
+          name: '🪪 Identité',
           value: profile.nomPrenom || 'Non renseigné',
           inline: false
         },
         {
-          name: 'Âge / Genre',
+          name: '👤 Âge / Genre',
           value: profile.ageGenre || 'Non renseigné',
           inline: false
         },
         {
-          name: 'Pouvoir / Aptitude',
+          name: '🔮 Pouvoir / Aptitude',
           value: truncate(profile.pouvoir || 'Non renseigné', 1024),
           inline: false
         },
         {
-          name: 'Description',
+          name: '📝 Description',
           value: truncate(profile.description || 'Aucune description.', 1024),
           inline: false
         },
         {
-          name: 'Relations',
+          name: '💞 Relations',
           value: buildRelationsSummary(profile.relations || []),
           inline: false
         }
@@ -200,33 +204,33 @@ function buildProfileEmbed(profile, targetUser, guild, page = 1) {
     return new EmbedBuilder()
       .setColor(color)
       .setAuthor({
-        name: `Détails complémentaires de ${targetUser.username}`,
+        name: `📚 Détails complémentaires de ${targetUser.username}`,
         iconURL: targetUser.displayAvatarURL({ size: 256 })
       })
-      .setTitle(`Fiche annexe — ${profile.nomPrenom || targetUser.username} • Slot ${slot}`)
+      .setTitle(`🧾 Fiche annexe — ${profile.nomPrenom || targetUser.username} • Slot ${slot}`)
       .addFields(
         {
-          name: 'Métier',
+          name: '💼 Métier',
           value: profile.metier || 'Sans métier',
           inline: false
         },
         {
-          name: 'Titre équipé',
+          name: '🏅 Titre équipé',
           value: getEquippedTitleDisplay(profile),
           inline: false
         },
         {
-          name: 'Souillure',
+          name: '☣️ Souillure',
           value: `${buildSouillureBar(souillure)}\n${getSouillureState(souillure)}`,
           inline: false
         },
         {
-          name: 'Présence',
+          name: '👁️ Présence',
           value: getPresenceText(souillure),
           inline: false
         },
         {
-          name: 'Progression RP',
+          name: '📈 Progression RP',
           value: [
             `**Niveau RP :** ${rpLevel}`,
             `**Messages RP validés :** ${rpMessages}`,
@@ -235,7 +239,7 @@ function buildProfileEmbed(profile, targetUser, guild, page = 1) {
           inline: false
         },
         {
-          name: 'Archive',
+          name: '📂 Archive',
           value: [
             `**Créé le :** ${formatDate(profile.createdAt)}`,
             `**Dernière mise à jour :** ${formatDate(profile.updatedAt)}`
@@ -250,18 +254,18 @@ function buildProfileEmbed(profile, targetUser, guild, page = 1) {
   return new EmbedBuilder()
     .setColor(color)
     .setAuthor({
-      name: `Inventaire de ${targetUser.username}`,
+      name: `🎒 Inventaire de ${targetUser.username}`,
       iconURL: targetUser.displayAvatarURL({ size: 256 })
     })
-    .setTitle(`Inventaire & Portefeuille — ${profile.nomPrenom || targetUser.username} • Slot ${slot}`)
+    .setTitle(`💰 Inventaire & Portefeuille — ${profile.nomPrenom || targetUser.username} • Slot ${slot}`)
     .addFields(
       {
-        name: 'Portefeuille',
-        value: `**${wallet}** pièces`,
+        name: '🪙 Portefeuille',
+        value: `**${wallet}** Crawns`,
         inline: false
       },
       {
-        name: 'Inventaire',
+        name: '🎁 Inventaire',
         value: truncate(formatInventory(profile.inventory), 1024),
         inline: false
       }

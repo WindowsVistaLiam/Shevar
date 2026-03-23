@@ -70,7 +70,7 @@ module.exports = {
       await interaction.reply({
         content:
           `Tu n’as pas assez d’argent sur ton **profil actif (slot ${senderSlot})**.\n` +
-          `Portefeuille actuel : **${senderProfile.wallet || 0}** pièces.`,
+          `Portefeuille actuel : **${senderProfile.wallet || 0}** Crawns.`,
         ephemeral: true
       });
       return;
@@ -97,7 +97,7 @@ module.exports = {
 
     await interaction.reply({
       content:
-        `💸 <@${interaction.user.id}> propose de donner **${montant}** pièces ` +
+        `💸 <@${interaction.user.id}> propose de donner **${montant}** Crawns ` +
         `depuis son **slot ${senderSlot}** à <@${targetUser.id}> sur son **slot ${receiverSlot}**.\n` +
         `⏳ Cette demande expire dans **60 secondes**.`,
       components: [buildTradeActionRow(tradeId)]

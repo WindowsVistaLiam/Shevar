@@ -5,7 +5,7 @@ function formatSide(side) {
   const lines = [];
 
   if ((side.money || 0) > 0) {
-    lines.push(`💰 ${side.money} pièces`);
+    lines.push(`💰 ${side.money} Crawns`);
   }
 
   if (side.itemName && (side.itemQuantity || 0) > 0) {

@@ -94,8 +94,8 @@ module.exports = {
     await interaction.reply({
       content:
         `💸 Vente effectuée : **${item.name}** ×${quantity}\n` +
-        `💰 Gain total : **${totalPrice}** pièces\n` +
-        `👛 Nouveau portefeuille : **${profile.wallet}** pièces`,
+        `💰 Gain total : **${totalPrice}** Crawns\n` +
+        `👛 Nouveau portefeuille : **${profile.wallet}** Crawns`,
       ephemeral: true
     });
   }

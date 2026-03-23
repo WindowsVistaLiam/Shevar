@@ -57,7 +57,7 @@ module.exports = {
     await interaction.reply({
       content:
         `✅ Le portefeuille de **${targetUser.username}** ` +
-        `(**slot ${slot}**) est maintenant de **${profile.wallet}** pièces.`,
+        `(**slot ${slot}**) est maintenant de **${profile.wallet}** Crawns.`,
       ephemeral: true
     });
   }

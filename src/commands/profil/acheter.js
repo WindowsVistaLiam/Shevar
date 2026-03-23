@@ -64,8 +64,8 @@ module.exports = {
       await interaction.reply({
         content:
           `Tu n’as pas assez d’argent sur ton **profil actif (slot ${slot})**.\n` +
-          `Prix total : **${totalPrice}** pièces\n` +
-          `Portefeuille actuel : **${profile.wallet || 0}** pièces.`,
+          `Prix total : **${totalPrice}** Crawns\n` +
+          `Portefeuille actuel : **${profile.wallet || 0}** Crawns.`,
         ephemeral: true
       });
       return;
@@ -96,8 +96,8 @@ module.exports = {
     await interaction.reply({
       content:
         `🛒 Achat effectué : **${item.name}** ×${quantity}\n` +
-        `💰 Coût total : **${totalPrice}** pièces\n` +
-        `👛 Portefeuille restant : **${profile.wallet}** pièces`,
+        `💰 Coût total : **${totalPrice}** Crawns\n` +
+        `👛 Portefeuille restant : **${profile.wallet}** Crawns`,
       ephemeral: true
     });
   }

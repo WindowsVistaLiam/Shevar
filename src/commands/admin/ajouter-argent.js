@@ -60,8 +60,8 @@ module.exports = {
 
     await interaction.reply({
       content:
-        `✅ **${montant}** pièces ont été ajoutées à **${targetUser.username}** ` +
-        `(**slot ${slot}**).\nPortefeuille actuel : **${profile.wallet}** pièces.`,
+        `✅ **${montant}** Crawns ont été ajoutées à **${targetUser.username}** ` +
+        `(**slot ${slot}**).\nPortefeuille actuel : **${profile.wallet}** Crawns.`,
       ephemeral: true
     });
   }

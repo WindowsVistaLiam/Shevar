@@ -54,8 +54,8 @@ module.exports = {
 
     await interaction.reply({
       content:
-        `✅ **${montant}** pièces ont été retirées à **${targetUser.username}** ` +
-        `(**slot ${slot}**).\nPortefeuille actuel : **${profile.wallet}** pièces.`,
+        `✅ **${montant}** Crawns ont été retirées à **${targetUser.username}** ` +
+        `(**slot ${slot}**).\nPortefeuille actuel : **${profile.wallet}** Crawns.`,
       ephemeral: true
     });
   }
