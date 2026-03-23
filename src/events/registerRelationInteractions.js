@@ -2,11 +2,18 @@ const {
   ActionRowBuilder,
   ModalBuilder,
   TextInputBuilder,
-  TextInputStyle
+  TextInputStyle,
+  MessageFlags
 } = require('discord.js');
 
 const Profile = require('../models/Profile');
-const { buildRelationListEmbed, buildRelationDetailEmbed, getRelationPage, ALLOWED_RELATION_TYPES, MAX_RELATIONS_PER_PROFILE } = require('../utils/relationEmbeds');
+const {
+  buildRelationListEmbed,
+  buildRelationDetailEmbed,
+  getRelationPage,
+  ALLOWED_RELATION_TYPES,
+  MAX_RELATIONS_PER_PROFILE
+} = require('../utils/relationEmbeds');
 const { buildRelationRows } = require('../utils/relationComponents');
 
 function parseTargetUserId(rawValue = '') {
@@ -48,7 +55,13 @@ async function buildRelationPanel(client, guildId, guild, ownerUserId, slot, pag
 
   return {
     embeds: [buildRelationListEmbed(profile, ownerUser, guild, pageData.page)],
-    components: buildRelationRows(ownerUserId, slot, pageData.page, pageData.totalPages, pageData.items)
+    components: buildRelationRows(
+      ownerUserId,
+      slot,
+      pageData.page,
+      pageData.totalPages,
+      pageData.items
+    )
   };
 }
 
@@ -71,7 +84,7 @@ module.exports = function registerRelationInteractions(client) {
         if (interaction.user.id !== ownerUserId) {
           await interaction.reply({
             content: 'Tu ne peux pas utiliser cette interface.',
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
           });
           return;
         }
@@ -83,11 +96,11 @@ module.exports = function registerRelationInteractions(client) {
 
           const targetUserInput = new TextInputBuilder()
             .setCustomId('targetUser')
-            .setLabel('Utilisateur cible (mention ou ID)')
+            .setLabel('Utilisateur cible')
             .setStyle(TextInputStyle.Short)
             .setRequired(true)
             .setMaxLength(30)
-            .setPlaceholder('@Utilisateur ou 123456789012345678');
+            .setPlaceholder('@Utilisateur ou ID Discord');
 
           const targetSlotInput = new TextInputBuilder()
             .setCustomId('targetSlot')
@@ -100,11 +113,11 @@ module.exports = function registerRelationInteractions(client) {
 
           const typeInput = new TextInputBuilder()
             .setCustomId('type')
-            .setLabel(`Type (${ALLOWED_RELATION_TYPES.join(', ')})`)
+            .setLabel('Type de relation')
             .setStyle(TextInputStyle.Short)
             .setRequired(true)
             .setMaxLength(20)
-            .setPlaceholder('allie');
+            .setPlaceholder('allie, rival, famille...');
 
           const descriptionInput = new TextInputBuilder()
             .setCustomId('description')
@@ -143,7 +156,7 @@ module.exports = function registerRelationInteractions(client) {
         if (!payload) {
           await interaction.reply({
             content: 'Impossible de retrouver ce profil.',
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
           });
           return;
         }
@@ -168,7 +181,7 @@ module.exports = function registerRelationInteractions(client) {
         if (interaction.user.id !== ownerUserId) {
           await interaction.reply({
             content: 'Tu ne peux pas utiliser cette interface.',
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
           });
           return;
         }
@@ -182,7 +195,7 @@ module.exports = function registerRelationInteractions(client) {
         if (!profile) {
           await interaction.reply({
             content: 'Ce profil n’existe plus.',
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
           });
           return;
         }
@@ -192,7 +205,7 @@ module.exports = function registerRelationInteractions(client) {
         if (!relation) {
           await interaction.reply({
             content: 'Cette relation est introuvable.',
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
           });
           return;
         }
@@ -201,17 +214,22 @@ module.exports = function registerRelationInteractions(client) {
         if (!ownerUser) {
           await interaction.reply({
             content: 'Impossible de retrouver le propriétaire du profil.',
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
           });
           return;
         }
 
         if (action === 'relation_detail_select') {
-          const embed = buildRelationDetailEmbed(profile.toObject(), ownerUser, relation.toObject(), interaction.guild);
+          const embed = buildRelationDetailEmbed(
+            profile.toObject(),
+            ownerUser,
+            relation.toObject(),
+            interaction.guild
+          );
 
           await interaction.reply({
             embeds: [embed],
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
           });
           return;
         }
@@ -232,7 +250,7 @@ module.exports = function registerRelationInteractions(client) {
           if (!payload) {
             await interaction.reply({
               content: 'Impossible de recharger les relations.',
-              ephemeral: true
+              flags: MessageFlags.Ephemeral
             });
             return;
           }
@@ -253,7 +271,7 @@ module.exports = function registerRelationInteractions(client) {
         if (interaction.user.id !== ownerUserId) {
           await interaction.reply({
             content: 'Tu ne peux pas utiliser cette interface.',
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
           });
           return;
         }
@@ -267,7 +285,7 @@ module.exports = function registerRelationInteractions(client) {
         if (!profile) {
           await interaction.reply({
             content: 'Ce profil n’existe plus.',
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
           });
           return;
         }
@@ -275,7 +293,7 @@ module.exports = function registerRelationInteractions(client) {
         if ((profile.relations || []).length >= MAX_RELATIONS_PER_PROFILE) {
           await interaction.reply({
             content: `Tu as déjà atteint la limite de **${MAX_RELATIONS_PER_PROFILE} relations** pour ce profil.`,
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
           });
           return;
         }
@@ -292,7 +310,7 @@ module.exports = function registerRelationInteractions(client) {
         if (!targetUserId) {
           await interaction.reply({
             content: 'Utilisateur cible invalide. Utilise une mention ou un ID Discord valide.',
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
           });
           return;
         }
@@ -300,7 +318,7 @@ module.exports = function registerRelationInteractions(client) {
         if (!Number.isInteger(targetSlot) || targetSlot < 1 || targetSlot > 10) {
           await interaction.reply({
             content: 'Le slot cible doit être un nombre entre **1** et **10**.',
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
           });
           return;
         }
@@ -308,7 +326,7 @@ module.exports = function registerRelationInteractions(client) {
         if (!ALLOWED_RELATION_TYPES.includes(relationType)) {
           await interaction.reply({
             content: `Type invalide. Types autorisés : **${ALLOWED_RELATION_TYPES.join(', ')}**.`,
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
           });
           return;
         }
@@ -316,7 +334,7 @@ module.exports = function registerRelationInteractions(client) {
         if (targetUserId === ownerUserId && targetSlot === slot) {
           await interaction.reply({
             content: 'Tu ne peux pas créer une relation avec le même profil.',
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
           });
           return;
         }
@@ -330,19 +348,21 @@ module.exports = function registerRelationInteractions(client) {
         if (!targetProfile) {
           await interaction.reply({
             content: `Aucun profil trouvé pour cet utilisateur dans le **slot ${targetSlot}**.`,
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
           });
           return;
         }
 
-        const alreadyExists = (profile.relations || []).some(relation =>
-          relation.targetUserId === targetUserId && Number(relation.targetSlot) === targetSlot
+        const alreadyExists = (profile.relations || []).some(
+          relation =>
+            relation.targetUserId === targetUserId &&
+            Number(relation.targetSlot) === targetSlot
         );
 
         if (alreadyExists) {
           await interaction.reply({
             content: 'Une relation vers ce profil existe déjà.',
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
           });
           return;
         }
@@ -350,7 +370,8 @@ module.exports = function registerRelationInteractions(client) {
         profile.relations.push({
           targetUserId,
           targetSlot,
-          targetProfileNameSnapshot: targetProfile.nomPrenom || `Profil ${targetUserId} • Slot ${targetSlot}`,
+          targetProfileNameSnapshot:
+            targetProfile.nomPrenom || `Profil ${targetUserId} • Slot ${targetSlot}`,
           type: relationType,
           description
         });
@@ -368,20 +389,14 @@ module.exports = function registerRelationInteractions(client) {
           totalPages
         );
 
-        if (!payload) {
-          await interaction.reply({
-            content: 'La relation a été ajoutée, mais l’interface n’a pas pu être rechargée.',
-            ephemeral: true
-          });
-          return;
-        }
-
         await interaction.reply({
           content: 'Relation ajoutée avec succès.',
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
 
-        await interaction.message?.edit(payload).catch(() => {});
+        if (payload && interaction.message) {
+          await interaction.message.edit(payload).catch(() => {});
+        }
       }
     } catch (error) {
       console.error('❌ Erreur interactions relation :', error);
@@ -389,12 +404,12 @@ module.exports = function registerRelationInteractions(client) {
       if (interaction.replied || interaction.deferred) {
         await interaction.followUp({
           content: 'Une erreur est survenue pendant la gestion des relations.',
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         }).catch(() => {});
       } else {
         await interaction.reply({
           content: 'Une erreur est survenue pendant la gestion des relations.',
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         }).catch(() => {});
       }
     }
