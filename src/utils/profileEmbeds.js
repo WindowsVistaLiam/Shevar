@@ -16,6 +16,22 @@ function buildSouillureBar(percent = 0) {
   return `${'█'.repeat(filledBars)}${'░'.repeat(emptyBars)} ${safe}%`;
 }
 
+function getEquippedTitleDisplay(profile) {
+  if (!profile.equippedTitle) {
+    return 'Aucun titre équipé';
+  }
+
+  const equipped = Array.isArray(profile.titles)
+    ? profile.titles.find(title => title.name === profile.equippedTitle)
+    : null;
+
+  if (!equipped) {
+    return profile.equippedTitle;
+  }
+
+  return getTitleRarityDisplay(equipped.name, equipped.rarity);
+}
+
 function getSouillureState(percent = 0) {
   const value = Number(percent) || 0;
 
