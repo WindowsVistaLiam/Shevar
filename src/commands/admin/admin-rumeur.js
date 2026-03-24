@@ -2,7 +2,81 @@ const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const Rumor = require('../../models/rumor');
 const { canManageReputation } = require('../../config/permissions');
 const { buildPublishedRumorEmbed } = require('../../utils/rumorEmbeds');
-const { buildPublishedRumorRows } = require('../../utils/rumorComponents');
+
+function extractMessageReference(input = '') {
+  const value = input.trim();
+
+  if (!value) {
+    return { type: null, value: null };
+  }
+
+  const messageLinkMatch = value.match(
+    /^https?:\/\/(?:canary\.|ptb\.)?discord\.com\/channels\/(\d+)\/(\d+)\/(\d+)$/
+  );
+
+  if (messageLinkMatch) {
+    return {
+      type: 'message_link',
+      guildId: messageLinkMatch[1],
+      channelId: messageLinkMatch[2],
+      messageId: messageLinkMatch[3]
+    };
+  }
+
+  const discordIdMatch = value.match(/^\d{17,20}$/);
+  if (discordIdMatch) {
+    return {
+      type: 'discord_id',
+      messageId: value
+    };
+  }
+
+  const mongoIdMatch = value.match(/^[a-fA-F0-9]{24}$/);
+  if (mongoIdMatch) {
+    return {
+      type: 'mongo_id',
+      mongoId: value
+    };
+  }
+
+  return { type: 'unknown', value };
+}
+
+async function findRumorByReference(guildId, reference) {
+  const parsed = extractMessageReference(reference);
+
+  if (!parsed.type || parsed.type === 'unknown') {
+    return null;
+  }
+
+  if (parsed.type === 'mongo_id') {
+    return Rumor.findOne({
+      _id: parsed.mongoId,
+      guildId
+    });
+  }
+
+  if (parsed.type === 'discord_id') {
+    return Rumor.findOne({
+      guildId,
+      messageId: parsed.messageId
+    });
+  }
+
+  if (parsed.type === 'message_link') {
+    if (parsed.guildId !== guildId) {
+      return null;
+    }
+
+    return Rumor.findOne({
+      guildId,
+      channelId: parsed.channelId,
+      messageId: parsed.messageId
+    });
+  }
+
+  return null;
+}
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -13,10 +87,16 @@ module.exports = {
         .setName('archiver')
         .setDescription('Archiver une rumeur active')
         .addStringOption(option =>
-          option.setName('id').setDescription('ID MongoDB de la rumeur').setRequired(true)
+          option
+            .setName('reference')
+            .setDescription('Lien du message, ID du message Discord, ou ID MongoDB')
+            .setRequired(true)
         )
         .addStringOption(option =>
-          option.setName('raison').setDescription('Raison de l’archivage').setRequired(false)
+          option
+            .setName('raison')
+            .setDescription('Raison de l’archivage')
+            .setRequired(false)
         )
     )
     .addSubcommand(sub =>
@@ -24,10 +104,16 @@ module.exports = {
         .setName('supprimer')
         .setDescription('Supprimer une rumeur')
         .addStringOption(option =>
-          option.setName('id').setDescription('ID MongoDB de la rumeur').setRequired(true)
+          option
+            .setName('reference')
+            .setDescription('Lien du message, ID du message Discord, ou ID MongoDB')
+            .setRequired(true)
         )
         .addStringOption(option =>
-          option.setName('raison').setDescription('Raison de la suppression').setRequired(false)
+          option
+            .setName('raison')
+            .setDescription('Raison de la suppression')
+            .setRequired(false)
         )
     ),
 
@@ -41,17 +127,21 @@ module.exports = {
     }
 
     const subcommand = interaction.options.getSubcommand();
-    const rumorId = interaction.options.getString('id', true);
+    const reference = interaction.options.getString('reference', true);
     const reason = interaction.options.getString('raison') || 'Aucune raison précisée.';
 
-    const rumor = await Rumor.findOne({
-      _id: rumorId,
-      guildId: interaction.guildId
-    });
+    const rumor = await findRumorByReference(interaction.guildId, reference);
 
     if (!rumor) {
       await interaction.reply({
-        content: 'Rumeur introuvable.',
+        content: [
+          'Rumeur introuvable.',
+          '',
+          'Références acceptées :',
+          '• lien du message Discord',
+          '• ID du message Discord',
+          '• ID MongoDB'
+        ].join('\n'),
         flags: MessageFlags.Ephemeral
       });
       return;
@@ -71,6 +161,7 @@ module.exports = {
 
     if (rumor.channelId && rumor.messageId) {
       const channel = await interaction.guild.channels.fetch(rumor.channelId).catch(() => null);
+
       if (channel?.isTextBased()) {
         const message = await channel.messages.fetch(rumor.messageId).catch(() => null);
 
@@ -100,7 +191,8 @@ module.exports = {
     await interaction.reply({
       content: [
         `Rumeur **${subcommand === 'archiver' ? 'archivée' : 'supprimée'}** avec succès.`,
-        `ID : \`${rumor._id}\``,
+        `Référence utilisée : \`${reference}\``,
+        `ID base : \`${rumor._id}\``,
         `Raison : ${reason}`
       ].join('\n'),
       flags: MessageFlags.Ephemeral
