@@ -96,30 +96,6 @@ async function tryLoadItemIcon(iconName) {
   }
 }
 
-function wrapTextCentered(ctx, text, centerX, startY, maxWidth, lineHeight, maxLines = 2) {
-  const words = text.split(' ');
-  const lines = [];
-  let line = '';
-
-  for (const word of words) {
-    const testLine = line ? `${line} ${word}` : word;
-    const width = ctx.measureText(testLine).width;
-
-    if (width > maxWidth && line) {
-      lines.push(line);
-      line = word;
-    } else {
-      line = testLine;
-    }
-  }
-
-  if (line) lines.push(line);
-
-  lines.slice(0, maxLines).forEach((currentLine, index) => {
-    ctx.fillText(currentLine, centerX, startY + index * lineHeight);
-  });
-}
-
 function drawBackground(ctx) {
   const bg = ctx.createLinearGradient(0, 0, 0, CANVAS_HEIGHT);
   bg.addColorStop(0, '#090b10');
@@ -167,26 +143,31 @@ function drawOuterFrame(ctx) {
   ctx.stroke();
 }
 
-function drawTitleBlock(ctx, profile) {
-  const titleGradient = ctx.createLinearGradient(70, 0, 420, 0);
-  titleGradient.addColorStop(0, '#e2c27b');
-  titleGradient.addColorStop(1, '#a67d34');
+function drawHeaderOrnament(ctx) {
+  const centerX = CANVAS_WIDTH / 2;
+  const y = 74;
 
-  ctx.fillStyle = titleGradient;
-  ctx.font = 'bold 36px Arial';
-  ctx.textAlign = 'left';
-  ctx.fillText('Arsenal du personnage', 70, 78);
-
-  ctx.fillStyle = 'rgba(239, 230, 210, 0.85)';
-  ctx.font = '20px Arial';
-  ctx.fillText(profile.nomPrenom || 'Personnage sans nom', 72, 110);
-
-  ctx.strokeStyle = 'rgba(214, 177, 91, 0.42)';
+  ctx.strokeStyle = 'rgba(226, 194, 123, 0.75)';
   ctx.lineWidth = 2;
+
   ctx.beginPath();
-  ctx.moveTo(70, 128);
-  ctx.lineTo(380, 128);
+  ctx.moveTo(centerX - 120, y);
+  ctx.lineTo(centerX - 30, y);
   ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(centerX + 30, y);
+  ctx.lineTo(centerX + 120, y);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(centerX, y, 18, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(centerX, y, 6, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(226, 194, 123, 0.75)';
+  ctx.fill();
 }
 
 function drawCenterAura(ctx) {
@@ -534,24 +515,23 @@ async function drawSlot(ctx, slot, equippedData) {
   drawRoundedRect(ctx, pos.x + 4, pos.y + 4, SLOT_SIZE - 8, SLOT_SIZE - 8, 14);
   ctx.stroke();
 
-  ctx.fillStyle = '#dbcaa3';
-  ctx.font = 'bold 15px Arial';
-  ctx.textAlign = 'center';
-  ctx.fillText(SLOT_LABELS[slot], pos.x + SLOT_SIZE / 2, pos.y - 12);
-
   const itemName = equippedData?.itemNameSnapshot || '';
   const iconName = equippedData?.icon || '';
 
-  drawIconFrame(ctx, pos.x + 14, pos.y + 12, 80, accent);
+  drawIconFrame(ctx, pos.x + 14, pos.y + 14, 80, accent);
 
   if (!itemName) {
-    ctx.fillStyle = 'rgba(255,255,255,0.18)';
-    ctx.font = '13px Arial';
-    ctx.fillText('Emplacement vide', pos.x + SLOT_SIZE / 2, pos.y + 58);
-
-    ctx.fillStyle = 'rgba(220, 210, 188, 0.50)';
-    ctx.font = '11px Arial';
-    ctx.fillText('-', pos.x + SLOT_SIZE / 2, pos.y + 82);
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(pos.x + 54, pos.y + 54, 18, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(pos.x + 42, pos.y + 54);
+    ctx.lineTo(pos.x + 66, pos.y + 54);
+    ctx.stroke();
+    ctx.restore();
     return;
   }
 
@@ -559,18 +539,14 @@ async function drawSlot(ctx, slot, equippedData) {
 
   if (itemIcon) {
     ctx.save();
-    drawRoundedRect(ctx, pos.x + 14, pos.y + 12, 80, 80, 16);
+    drawRoundedRect(ctx, pos.x + 14, pos.y + 14, 80, 80, 16);
     ctx.clip();
-    ctx.drawImage(itemIcon, pos.x + 14, pos.y + 12, 80, 80);
+    ctx.drawImage(itemIcon, pos.x + 14, pos.y + 14, 80, 80);
     ctx.restore();
   } else {
     const theme = detectItemTheme(itemName, slot);
-    drawProceduralIcon(ctx, theme, pos.x + 14, pos.y + 12, 80, accent);
+    drawProceduralIcon(ctx, theme, pos.x + 14, pos.y + 14, 80, accent);
   }
-
-  ctx.fillStyle = '#e9ddc3';
-  ctx.font = '12px Arial';
-  wrapTextCentered(ctx, shorten(itemName, 20), pos.x + SLOT_SIZE / 2, pos.y + 104, 92, 13, 2);
 }
 
 function buildEquipmentSummary(profile) {
@@ -581,46 +557,19 @@ function buildEquipmentSummary(profile) {
   }).join('\n');
 }
 
-function drawSummaryPanel(ctx, profile) {
-  drawRoundedRect(ctx, 62, 610, CANVAS_WIDTH - 124, 100, 18);
-  ctx.fillStyle = 'rgba(12, 14, 20, 0.82)';
-  ctx.fill();
-
-  ctx.lineWidth = 1.5;
-  ctx.strokeStyle = 'rgba(204, 169, 93, 0.28)';
-  ctx.stroke();
-
-  ctx.fillStyle = '#dbcaa3';
-  ctx.font = 'bold 18px Arial';
-  ctx.textAlign = 'left';
-  ctx.fillText('Resume des emplacements', 84, 640);
-
-  ctx.font = '14px Arial';
-  ctx.fillStyle = 'rgba(234, 227, 214, 0.92)';
-
-  const summaryLines = buildEquipmentSummary(profile).split('\n');
-  summaryLines.forEach((line, index) => {
-    const col = index < 4 ? 0 : 1;
-    const row = index % 4;
-    ctx.fillText(line, 84 + col * 470, 668 + row * 18);
-  });
-}
-
 async function createInventoryAttachment(profile) {
   const canvas = createCanvas(CANVAS_WIDTH, CANVAS_HEIGHT);
   const ctx = canvas.getContext('2d');
 
   drawBackground(ctx);
   drawOuterFrame(ctx);
-  drawTitleBlock(ctx, profile);
+  drawHeaderOrnament(ctx);
   drawCenterAura(ctx);
   drawHumanSilhouette(ctx);
 
   for (const slot of EQUIPMENT_SLOTS) {
     await drawSlot(ctx, slot, profile?.equippedItems?.[slot] || {});
   }
-
-  drawSummaryPanel(ctx, profile);
 
   const buffer = canvas.toBuffer('image/png');
   return new AttachmentBuilder(buffer, { name: 'inventaire-silhouette.png' });
