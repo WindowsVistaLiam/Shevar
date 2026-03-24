@@ -32,7 +32,11 @@ const shopItemSchema = new mongoose.Schema(
       default: ''
     },
 
-    icon: { type: String, default: '' }
+    // Ancien système local
+    icon: { type: String, default: '' },
+
+    // Nouveau système
+    iconUrl: { type: String, default: '' }
   },
   { timestamps: true }
 );

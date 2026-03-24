@@ -1,6 +1,11 @@
 const { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } = require('discord.js');
 const ShopItem = require('../../models/ShopItem');
 
+function isValidImageAttachment(attachment) {
+  if (!attachment) return false;
+  return attachment.contentType?.startsWith('image/');
+}
+
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('set-boutique-item')
@@ -87,9 +92,22 @@ module.exports = {
     .addStringOption(option =>
       option
         .setName('icone')
-        .setDescription('Nom du fichier icône dans src/assets/inventory/items/')
+        .setDescription('Ancien nom de fichier local (optionnel)')
         .setRequired(false)
         .setMaxLength(100)
+    )
+    .addStringOption(option =>
+      option
+        .setName('icone_url')
+        .setDescription('URL directe de l’icône')
+        .setRequired(false)
+        .setMaxLength(500)
+    )
+    .addAttachmentOption(option =>
+      option
+        .setName('icone_fichier')
+        .setDescription('Image envoyée directement dans Discord')
+        .setRequired(false)
     ),
 
   async execute(interaction) {
@@ -105,6 +123,8 @@ module.exports = {
     const equipable = interaction.options.getBoolean('equipable', true);
     const equipmentSlot = interaction.options.getString('slot_equipement') || '';
     const icon = (interaction.options.getString('icone') || '').trim();
+    const iconUrlOption = (interaction.options.getString('icone_url') || '').trim();
+    const iconAttachment = interaction.options.getAttachment('icone_fichier');
 
     if (equipable && !equipmentSlot) {
       await interaction.reply({
@@ -122,6 +142,21 @@ module.exports = {
       return;
     }
 
+    if (iconAttachment && !isValidImageAttachment(iconAttachment)) {
+      await interaction.reply({
+        content: 'Le fichier fourni pour l’icône doit être une image valide.',
+        flags: MessageFlags.Ephemeral
+      });
+      return;
+    }
+
+    let iconUrl = '';
+    if (iconAttachment) {
+      iconUrl = iconAttachment.url;
+    } else if (iconUrlOption) {
+      iconUrl = iconUrlOption;
+    }
+
     const item = await ShopItem.findOneAndUpdate(
       { guildId: interaction.guildId, itemId },
       {
@@ -136,7 +171,8 @@ module.exports = {
         isActive,
         equipable,
         equipmentSlot: equipable ? equipmentSlot : '',
-        icon: equipable ? icon : ''
+        icon: equipable ? icon : '',
+        iconUrl: equipable ? iconUrl : ''
       },
       {
         upsert: true,
@@ -155,7 +191,8 @@ module.exports = {
         `Actif : **${item.isActive ? 'Oui' : 'Non'}**`,
         `Équipable : **${item.equipable ? 'Oui' : 'Non'}**`,
         `Slot : **${item.equipmentSlot || 'Aucun'}**`,
-        `Icône : **${item.icon || 'Aucune'}**`
+        `Icône locale : **${item.icon || 'Aucune'}**`,
+        `Icône URL : **${item.iconUrl || 'Aucune'}**`
       ].join('\n'),
       flags: MessageFlags.Ephemeral
     });

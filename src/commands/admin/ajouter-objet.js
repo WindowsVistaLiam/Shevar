@@ -2,6 +2,11 @@ const { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } = require('disc
 const Profile = require('../../models/Profile');
 const { getActiveSlot } = require('../../services/profileService');
 
+function isValidImageAttachment(attachment) {
+  if (!attachment) return false;
+  return attachment.contentType?.startsWith('image/');
+}
+
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('ajouter-objet')
@@ -60,9 +65,22 @@ module.exports = {
     .addStringOption(option =>
       option
         .setName('icone')
-        .setDescription('Nom du fichier icône dans src/assets/inventory/items/')
+        .setDescription('Ancien nom de fichier local (optionnel)')
         .setRequired(false)
         .setMaxLength(100)
+    )
+    .addStringOption(option =>
+      option
+        .setName('icone_url')
+        .setDescription('URL directe de l’icône')
+        .setRequired(false)
+        .setMaxLength(500)
+    )
+    .addAttachmentOption(option =>
+      option
+        .setName('icone_fichier')
+        .setDescription('Image envoyée directement dans Discord')
+        .setRequired(false)
     ),
 
   async execute(interaction) {
@@ -75,6 +93,8 @@ module.exports = {
     const equipable = interaction.options.getBoolean('equipable') || false;
     const equipmentSlot = interaction.options.getString('slot_equipement') || '';
     const icon = (interaction.options.getString('icone') || '').trim();
+    const iconUrlOption = (interaction.options.getString('icone_url') || '').trim();
+    const iconAttachment = interaction.options.getAttachment('icone_fichier');
 
     if (equipable && !equipmentSlot) {
       await interaction.reply({
@@ -82,6 +102,21 @@ module.exports = {
         flags: MessageFlags.Ephemeral
       });
       return;
+    }
+
+    if (iconAttachment && !isValidImageAttachment(iconAttachment)) {
+      await interaction.reply({
+        content: 'Le fichier fourni pour l’icône doit être une image valide.',
+        flags: MessageFlags.Ephemeral
+      });
+      return;
+    }
+
+    let iconUrl = '';
+    if (iconAttachment) {
+      iconUrl = iconAttachment.url;
+    } else if (iconUrlOption) {
+      iconUrl = iconUrlOption;
     }
 
     let profile = await Profile.findOne({
@@ -103,7 +138,8 @@ module.exports = {
         item.name.toLowerCase() === nom.toLowerCase() &&
         Boolean(item.equipable) === Boolean(equipable) &&
         (item.equipmentSlot || '') === (equipable ? equipmentSlot : '') &&
-        (item.icon || '') === (equipable ? icon : '')
+        (item.icon || '') === (equipable ? icon : '') &&
+        (item.iconUrl || '') === (equipable ? iconUrl : '')
     );
 
     if (existingItem) {
@@ -114,7 +150,8 @@ module.exports = {
         quantity: quantite,
         equipable,
         equipmentSlot: equipable ? equipmentSlot : '',
-        icon: equipable ? icon : ''
+        icon: equipable ? icon : '',
+        iconUrl: equipable ? iconUrl : ''
       });
     }
 
@@ -126,7 +163,8 @@ module.exports = {
         `Objet : **${nom}** ×${quantite}`,
         `Équipable : **${equipable ? 'Oui' : 'Non'}**`,
         `Slot équipement : **${equipable ? equipmentSlot : 'Aucun'}**`,
-        `Icône : **${equipable ? (icon || 'Aucune') : 'Aucune'}**`
+        `Icône locale : **${equipable ? (icon || 'Aucune') : 'Aucune'}**`,
+        `Icône URL : **${equipable ? (iconUrl || 'Aucune') : 'Aucune'}**`
       ].join('\n'),
       flags: MessageFlags.Ephemeral
     });

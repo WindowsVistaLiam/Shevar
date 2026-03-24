@@ -47,12 +47,6 @@ function drawRoundedRect(ctx, x, y, width, height, radius) {
   ctx.closePath();
 }
 
-function shorten(text, max = 18) {
-  if (!text) return 'Vide';
-  if (text.length <= max) return text;
-  return `${text.slice(0, max - 3)}...`;
-}
-
 function getSlotAccent(slot) {
   const accents = {
     tete: '#8b6bd6',
@@ -83,17 +77,27 @@ function getSlotGlow(slot) {
   return accents[slot] || 'rgba(255,255,255,0.15)';
 }
 
-async function tryLoadItemIcon(iconName) {
-  if (!iconName) return null;
-
-  const iconPath = path.join(process.cwd(), 'src', 'assets', 'inventory', 'items', iconName);
-  if (!fs.existsSync(iconPath)) return null;
-
-  try {
-    return await loadImage(iconPath);
-  } catch {
-    return null;
+async function tryLoadItemIcon(iconUrl, iconName) {
+  if (iconUrl) {
+    try {
+      return await loadImage(iconUrl);
+    } catch {
+      // fallback local ensuite
+    }
   }
+
+  if (iconName) {
+    const iconPath = path.join(process.cwd(), 'src', 'assets', 'inventory', 'items', iconName);
+    if (fs.existsSync(iconPath)) {
+      try {
+        return await loadImage(iconPath);
+      } catch {
+        return null;
+      }
+    }
+  }
+
+  return null;
 }
 
 function drawBackground(ctx) {
@@ -517,6 +521,7 @@ async function drawSlot(ctx, slot, equippedData) {
 
   const itemName = equippedData?.itemNameSnapshot || '';
   const iconName = equippedData?.icon || '';
+  const iconUrl = equippedData?.iconUrl || '';
 
   drawIconFrame(ctx, pos.x + 14, pos.y + 14, 80, accent);
 
@@ -535,7 +540,7 @@ async function drawSlot(ctx, slot, equippedData) {
     return;
   }
 
-  const itemIcon = await tryLoadItemIcon(iconName);
+  const itemIcon = await tryLoadItemIcon(iconUrl, iconName);
 
   if (itemIcon) {
     ctx.save();

@@ -79,7 +79,8 @@ module.exports = {
         entry.name.toLowerCase() === item.name.toLowerCase() &&
         Boolean(entry.equipable) === Boolean(item.equipable) &&
         (entry.equipmentSlot || '') === (item.equipmentSlot || '') &&
-        (entry.icon || '') === (item.icon || '')
+        (entry.icon || '') === (item.icon || '') &&
+        (entry.iconUrl || '') === (item.iconUrl || '')
     );
 
     if (existingItem) {
@@ -90,7 +91,8 @@ module.exports = {
         quantity,
         equipable: item.equipable || false,
         equipmentSlot: item.equipable ? (item.equipmentSlot || '') : '',
-        icon: item.equipable ? (item.icon || '') : ''
+        icon: item.equipable ? (item.icon || '') : '',
+        iconUrl: item.equipable ? (item.iconUrl || '') : ''
       });
     }
 
@@ -106,7 +108,8 @@ module.exports = {
         `✅ Achat effectué : **${item.name}** ×${quantity}`,
         `Coût total : **${totalPrice}** Crawns`,
         `Portefeuille restant : **${profile.wallet}** Crawns`,
-        `Équipable : **${item.equipable ? 'Oui' : 'Non'}**${item.equipable ? ` (${item.equipmentSlot})` : ''}`
+        `Équipable : **${item.equipable ? 'Oui' : 'Non'}**${item.equipable ? ` (${item.equipmentSlot})` : ''}`,
+        `Icône URL : **${item.iconUrl || 'Aucune'}**`
       ].join('\n'),
       flags: MessageFlags.Ephemeral
     });

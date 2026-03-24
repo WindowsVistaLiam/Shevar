@@ -110,7 +110,8 @@ module.exports = function registerEquipmentInteractions(client) {
         profile.equippedItems[selectedSlot] = {
           inventoryItemId: item._id,
           itemNameSnapshot: item.name,
-          icon: item.icon || ''
+          icon: item.icon || '',
+          iconUrl: item.iconUrl || ''
         };
 
         await profile.save();
@@ -150,7 +151,8 @@ module.exports = function registerEquipmentInteractions(client) {
         profile.equippedItems[selectedSlot] = {
           inventoryItemId: null,
           itemNameSnapshot: '',
-          icon: ''
+          icon: '',
+          iconUrl: ''
         };
 
         await profile.save();

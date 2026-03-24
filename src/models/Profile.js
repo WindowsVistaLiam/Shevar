@@ -21,7 +21,8 @@ const inventoryItemSchema = new mongoose.Schema({
     default: ''
   },
 
-  icon: { type: String, default: '' } // nom de fichier optionnel dans src/assets/inventory/items/
+  icon: { type: String, default: '' },
+  iconUrl: { type: String, default: '' }
 });
 
 const titleSchema = new mongoose.Schema(
@@ -56,7 +57,8 @@ const equippedSlotSchema = new mongoose.Schema(
   {
     inventoryItemId: { type: mongoose.Schema.Types.ObjectId, default: null },
     itemNameSnapshot: { type: String, default: '' },
-    icon: { type: String, default: '' }
+    icon: { type: String, default: '' },
+    iconUrl: { type: String, default: '' }
   },
   { _id: false }
 );
