@@ -8,7 +8,7 @@ const CANVAS_HEIGHT = 760;
 const SLOT_SIZE = 108;
 
 const SLOT_LABELS = {
-  tete: 'Tête',
+  tete: 'Tete',
   torse: 'Torse',
   jambes: 'Jambes',
   pieds: 'Pieds',
@@ -44,15 +44,6 @@ function drawRoundedRect(ctx, x, y, width, height, radius) {
   ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
   ctx.lineTo(x, y + radius);
   ctx.quadraticCurveTo(x, y, x + radius, y);
-  ctx.closePath();
-}
-
-function drawDiamond(ctx, cx, cy, size) {
-  ctx.beginPath();
-  ctx.moveTo(cx, cy - size);
-  ctx.lineTo(cx + size, cy);
-  ctx.lineTo(cx, cy + size);
-  ctx.lineTo(cx - size, cy);
   ctx.closePath();
 }
 
@@ -174,19 +165,6 @@ function drawOuterFrame(ctx) {
   ctx.lineWidth = 1.5;
   ctx.strokeStyle = 'rgba(255, 225, 148, 0.16)';
   ctx.stroke();
-
-  const corners = [
-    [52, 52],
-    [CANVAS_WIDTH - 52, 52],
-    [52, CANVAS_HEIGHT - 52],
-    [CANVAS_WIDTH - 52, CANVAS_HEIGHT - 52]
-  ];
-
-  for (const [x, y] of corners) {
-    ctx.fillStyle = 'rgba(198, 162, 86, 0.9)';
-    drawDiamond(ctx, x, y, 8);
-    ctx.fill();
-  }
 }
 
 function drawTitleBlock(ctx, profile) {
@@ -195,12 +173,12 @@ function drawTitleBlock(ctx, profile) {
   titleGradient.addColorStop(1, '#a67d34');
 
   ctx.fillStyle = titleGradient;
-  ctx.font = 'bold 36px Serif';
+  ctx.font = 'bold 36px Arial';
   ctx.textAlign = 'left';
   ctx.fillText('Arsenal du personnage', 70, 78);
 
   ctx.fillStyle = 'rgba(239, 230, 210, 0.85)';
-  ctx.font = '20px Serif';
+  ctx.font = '20px Arial';
   ctx.fillText(profile.nomPrenom || 'Personnage sans nom', 72, 110);
 
   ctx.strokeStyle = 'rgba(214, 177, 91, 0.42)';
@@ -243,18 +221,15 @@ function drawHumanSilhouette(ctx) {
   ctx.strokeStyle = 'rgba(223, 189, 113, 0.20)';
   ctx.lineWidth = 2;
 
-  // tête
   ctx.beginPath();
   ctx.ellipse(0, -198, 42, 50, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.stroke();
 
-  // cou
   drawRoundedRect(ctx, -14, -155, 28, 24, 8);
   ctx.fill();
   ctx.stroke();
 
-  // épaules + torse
   ctx.beginPath();
   ctx.moveTo(-82, -122);
   ctx.quadraticCurveTo(-112, -104, -108, -66);
@@ -271,7 +246,6 @@ function drawHumanSilhouette(ctx) {
   ctx.fill();
   ctx.stroke();
 
-  // bras gauche
   ctx.beginPath();
   ctx.moveTo(-86, -106);
   ctx.quadraticCurveTo(-132, -78, -146, -18);
@@ -286,7 +260,6 @@ function drawHumanSilhouette(ctx) {
   ctx.fill();
   ctx.stroke();
 
-  // bras droit
   ctx.beginPath();
   ctx.moveTo(86, -106);
   ctx.quadraticCurveTo(132, -78, 146, -18);
@@ -301,7 +274,6 @@ function drawHumanSilhouette(ctx) {
   ctx.fill();
   ctx.stroke();
 
-  // bassin
   ctx.beginPath();
   ctx.moveTo(-46, 150);
   ctx.quadraticCurveTo(-18, 174, 0, 178);
@@ -313,7 +285,6 @@ function drawHumanSilhouette(ctx) {
   ctx.fill();
   ctx.stroke();
 
-  // jambe gauche
   ctx.beginPath();
   ctx.moveTo(-22, 228);
   ctx.quadraticCurveTo(-48, 300, -54, 382);
@@ -326,7 +297,6 @@ function drawHumanSilhouette(ctx) {
   ctx.fill();
   ctx.stroke();
 
-  // jambe droite
   ctx.beginPath();
   ctx.moveTo(22, 228);
   ctx.quadraticCurveTo(48, 300, 54, 382);
@@ -339,7 +309,6 @@ function drawHumanSilhouette(ctx) {
   ctx.fill();
   ctx.stroke();
 
-  // séparation légère centrale
   ctx.strokeStyle = 'rgba(255,255,255,0.05)';
   ctx.lineWidth = 1.1;
   ctx.beginPath();
@@ -370,14 +339,14 @@ function detectItemTheme(itemName = '', slot = '') {
 
   if (slot === 'tete' || /casque|chapeau|couronne|capuche|heaume/.test(name)) return 'helmet';
   if (slot === 'torse' || /armure|plastron|cape|robe|manteau|veste/.test(name)) return 'armor';
-  if (slot === 'jambes' || /jamb|pantalon|grève|cuiss/.test(name)) return 'legs';
+  if (slot === 'jambes' || /jamb|pantalon|cuiss/.test(name)) return 'legs';
   if (slot === 'pieds' || /botte|chaussure|soulier/.test(name)) return 'boots';
-  if (slot === 'mainDroite' || /epee|épée|lame|dague|hache|marteau|baton|bâton|lance|arc/.test(name)) return 'weapon';
+  if (slot === 'mainDroite' || /epee|epée|épée|lame|dague|hache|marteau|baton|bâton|lance|arc/.test(name)) return 'weapon';
   if (slot === 'mainGauche' || /bouclier|livre|grimoire|orbe|lanterne/.test(name)) return 'offhand';
   if (/anneau|ring|bague/.test(name)) return 'ring';
   if (/amulette|collier|pendentif/.test(name)) return 'amulet';
-
   if (slot === 'accessoire1' || slot === 'accessoire2') return 'trinket';
+
   return 'generic';
 }
 
@@ -507,13 +476,23 @@ function drawProceduralIcon(ctx, theme, x, y, size, accent) {
     ctx.quadraticCurveTo(cx, cy - 40, cx + 20, cy - 20);
     ctx.stroke();
   } else if (theme === 'trinket') {
-    drawDiamond(ctx, cx, cy, 18);
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - 18);
+    ctx.lineTo(cx + 18, cy);
+    ctx.lineTo(cx, cy + 18);
+    ctx.lineTo(cx - 18, cy);
+    ctx.closePath();
     ctx.stroke();
     ctx.beginPath();
     ctx.arc(cx, cy, 5, 0, Math.PI * 2);
     ctx.fill();
   } else {
-    drawDiamond(ctx, cx, cy, 20);
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - 20);
+    ctx.lineTo(cx + 20, cy);
+    ctx.lineTo(cx, cy + 20);
+    ctx.lineTo(cx - 20, cy);
+    ctx.closePath();
     ctx.stroke();
     ctx.beginPath();
     ctx.arc(cx, cy, 8, 0, Math.PI * 2);
@@ -556,7 +535,7 @@ async function drawSlot(ctx, slot, equippedData) {
   ctx.stroke();
 
   ctx.fillStyle = '#dbcaa3';
-  ctx.font = 'bold 15px Serif';
+  ctx.font = 'bold 15px Arial';
   ctx.textAlign = 'center';
   ctx.fillText(SLOT_LABELS[slot], pos.x + SLOT_SIZE / 2, pos.y - 12);
 
@@ -567,12 +546,12 @@ async function drawSlot(ctx, slot, equippedData) {
 
   if (!itemName) {
     ctx.fillStyle = 'rgba(255,255,255,0.18)';
-    ctx.font = '13px Serif';
+    ctx.font = '13px Arial';
     ctx.fillText('Emplacement vide', pos.x + SLOT_SIZE / 2, pos.y + 58);
 
     ctx.fillStyle = 'rgba(220, 210, 188, 0.50)';
-    ctx.font = '11px Sans';
-    ctx.fillText('—', pos.x + SLOT_SIZE / 2, pos.y + 82);
+    ctx.font = '11px Arial';
+    ctx.fillText('-', pos.x + SLOT_SIZE / 2, pos.y + 82);
     return;
   }
 
@@ -590,7 +569,7 @@ async function drawSlot(ctx, slot, equippedData) {
   }
 
   ctx.fillStyle = '#e9ddc3';
-  ctx.font = '12px Sans';
+  ctx.font = '12px Arial';
   wrapTextCentered(ctx, shorten(itemName, 20), pos.x + SLOT_SIZE / 2, pos.y + 104, 92, 13, 2);
 }
 
@@ -598,7 +577,7 @@ function buildEquipmentSummary(profile) {
   return EQUIPMENT_SLOTS.map(slot => {
     const equipped = profile?.equippedItems?.[slot];
     const name = equipped?.itemNameSnapshot || 'Aucun';
-    return `• **${SLOT_LABELS[slot]}** : ${name}`;
+    return `• ${SLOT_LABELS[slot]} : ${name}`;
   }).join('\n');
 }
 
@@ -612,22 +591,18 @@ function drawSummaryPanel(ctx, profile) {
   ctx.stroke();
 
   ctx.fillStyle = '#dbcaa3';
-  ctx.font = 'bold 18px Serif';
+  ctx.font = 'bold 18px Arial';
   ctx.textAlign = 'left';
-  ctx.fillText('Résumé des emplacements', 84, 640);
+  ctx.fillText('Resume des emplacements', 84, 640);
 
-  ctx.font = '14px Sans';
+  ctx.font = '14px Arial';
   ctx.fillStyle = 'rgba(234, 227, 214, 0.92)';
 
   const summaryLines = buildEquipmentSummary(profile).split('\n');
   summaryLines.forEach((line, index) => {
     const col = index < 4 ? 0 : 1;
     const row = index % 4;
-    ctx.fillText(
-      line.replace(/\*\*/g, ''),
-      84 + col * 470,
-      668 + row * 18
-    );
+    ctx.fillText(line, 84 + col * 470, 668 + row * 18);
   });
 }
 
