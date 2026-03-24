@@ -60,6 +60,9 @@ const profileSchema = new mongoose.Schema(
 
     souillure: { type: Number, default: 0, min: 0, max: 100 },
 
+    positiveReputation: { type: Number, default: 0, min: 0 },
+    negativeReputation: { type: Number, default: 0, min: 0 },
+
     relations: {
       type: [relationSchema],
       default: []

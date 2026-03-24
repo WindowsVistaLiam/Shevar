@@ -8,8 +8,18 @@ const rumorSchema = new mongoose.Schema(
     authorSlot: { type: Number, required: true, min: 1, max: 10 },
     authorProfileNameSnapshot: { type: String, default: '' },
 
+    targetUserId: { type: String, default: null },
+    targetSlot: { type: Number, default: null, min: 1, max: 10 },
+    targetProfileNameSnapshot: { type: String, default: '' },
+
     content: { type: String, required: true, maxlength: 500 },
     anonymous: { type: Boolean, default: true },
+
+    believers: { type: [String], default: [] },
+    deniers: { type: [String], default: [] },
+
+    messageId: { type: String, default: '' },
+    channelId: { type: String, default: '' },
 
     status: {
       type: String,

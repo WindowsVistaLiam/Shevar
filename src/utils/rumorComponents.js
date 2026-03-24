@@ -54,7 +54,9 @@ function buildRumorRows(ownerUserId, slot, mode, page, totalPages, currentPageRu
           .addOptions(
             currentPageRumors.map(rumor => ({
               label: shorten(
-                `${rumor.anonymous ? 'Anonyme' : (rumor.authorProfileNameSnapshot || 'Profil inconnu')}`,
+                rumor.anonymous
+                  ? 'Anonyme'
+                  : (rumor.authorProfileNameSnapshot || 'Profil inconnu'),
                 100
               ),
               description: shorten(rumor.content, 100),
@@ -68,6 +70,24 @@ function buildRumorRows(ownerUserId, slot, mode, page, totalPages, currentPageRu
   return rows;
 }
 
+function buildPublishedRumorRows(rumorId) {
+  return [
+    new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`rumor_believe:${rumorId}`)
+        .setLabel('Croire')
+        .setEmoji('👍')
+        .setStyle(ButtonStyle.Success),
+      new ButtonBuilder()
+        .setCustomId(`rumor_deny:${rumorId}`)
+        .setLabel('Nier')
+        .setEmoji('👎')
+        .setStyle(ButtonStyle.Danger)
+    )
+  ];
+}
+
 module.exports = {
-  buildRumorRows
+  buildRumorRows,
+  buildPublishedRumorRows
 };

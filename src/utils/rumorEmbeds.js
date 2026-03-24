@@ -2,6 +2,7 @@ const { EmbedBuilder } = require('discord.js');
 
 const RUMORS_PER_PAGE = 5;
 const MAX_RUMOR_LENGTH = 500;
+const RUMOR_CHANNEL_ID = '1485843112399077457';
 
 function truncate(text, maxLength) {
   if (!text) return 'Aucun contenu.';
@@ -27,7 +28,7 @@ function buildRumorListEmbed({ rumors, page, mode, guild, profileName, slot }) {
 
   return new EmbedBuilder()
     .setColor(0x2b2d31)
-    .setTitle(`Rumeurs — ${profileName || 'Profil inconnu'} • Slot ${slot}`)
+    .setTitle(`🕯️ Panneau des rumeurs — ${profileName || 'Profil inconnu'} • Slot ${slot}`)
     .setDescription(
       pageData.totalItems === 0
         ? mode === 'mine'
@@ -40,12 +41,21 @@ function buildRumorListEmbed({ rumors, page, mode, guild, profileName, slot }) {
                 ? 'Anonyme'
                 : (rumor.authorProfileNameSnapshot || 'Profil inconnu');
 
-              return `**#${absoluteIndex} — ${author}**\n${truncate(rumor.content, 140)}`;
+              const target =
+                rumor.targetProfileNameSnapshot
+                  ? `\n🎯 **Cible :** ${rumor.targetProfileNameSnapshot}`
+                  : '';
+
+              return [
+                `**#${absoluteIndex} — ${author}**`,
+                `${truncate(rumor.content, 140)}${target}`,
+                `👍 ${rumor.believers?.length || 0} • 👎 ${rumor.deniers?.length || 0}`
+              ].join('\n');
             })
             .join('\n\n')
     )
     .setFooter({
-      text: `${guild?.name || 'Serveur RP'} • Vue : ${mode === 'mine' ? 'Mes rumeurs' : 'Toutes les rumeurs'} • Page ${pageData.page}/${pageData.totalPages}`
+      text: `${guild?.name || 'Serveur RP'} • Vue : ${mode === 'mine' ? 'Mes rumeurs' : 'Toutes les rumeurs'} • Salon public : ${RUMOR_CHANNEL_ID} • Page ${pageData.page}/${pageData.totalPages}`
     })
     .setTimestamp();
 }
@@ -55,13 +65,20 @@ function buildRumorDetailEmbed(rumor, guild) {
     ? 'Anonyme'
     : (rumor.authorProfileNameSnapshot || 'Profil inconnu');
 
+  const target = rumor.targetProfileNameSnapshot || 'Aucune cible précise';
+
   return new EmbedBuilder()
     .setColor(0x2b2d31)
-    .setTitle('Détail de la rumeur')
+    .setTitle('📜 Détail de la rumeur')
     .addFields(
       {
         name: 'Auteur affiché',
         value: author,
+        inline: false
+      },
+      {
+        name: 'Cible',
+        value: target,
         inline: false
       },
       {
@@ -73,6 +90,11 @@ function buildRumorDetailEmbed(rumor, guild) {
         name: 'Contenu',
         value: rumor.content || 'Aucun contenu.',
         inline: false
+      },
+      {
+        name: 'Réactions',
+        value: `👍 ${rumor.believers?.length || 0} • 👎 ${rumor.deniers?.length || 0}`,
+        inline: false
       }
     )
     .setFooter({
@@ -81,10 +103,43 @@ function buildRumorDetailEmbed(rumor, guild) {
     .setTimestamp();
 }
 
+function buildPublishedRumorEmbed(rumor) {
+  const author = rumor.anonymous
+    ? '🎭 Source inconnue'
+    : `🪪 ${rumor.authorProfileNameSnapshot || 'Profil inconnu'}`;
+
+  const target = rumor.targetProfileNameSnapshot
+    ? `\n🎯 **Cible :** ${rumor.targetProfileNameSnapshot}`
+    : '';
+
+  return new EmbedBuilder()
+    .setColor(rumor.anonymous ? 0x43474d : 0x5865f2)
+    .setTitle('🕯️ Une rumeur circule...')
+    .setDescription(`${rumor.content}${target}`)
+    .addFields(
+      {
+        name: 'Origine',
+        value: author,
+        inline: false
+      },
+      {
+        name: 'Réactions',
+        value: `👍 ${rumor.believers?.length || 0} • 👎 ${rumor.deniers?.length || 0}`,
+        inline: false
+      }
+    )
+    .setFooter({
+      text: `Rumeur RP • ${new Date(rumor.createdAt || Date.now()).toLocaleString('fr-FR')}`
+    })
+    .setTimestamp();
+}
+
 module.exports = {
   RUMORS_PER_PAGE,
   MAX_RUMOR_LENGTH,
+  RUMOR_CHANNEL_ID,
   getRumorPage,
   buildRumorListEmbed,
-  buildRumorDetailEmbed
+  buildRumorDetailEmbed,
+  buildPublishedRumorEmbed
 };

@@ -1,4 +1,4 @@
-const { SlashCommandBuilder } = require('discord.js');
+const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const Profile = require('../../models/Profile');
 const Rumor = require('../../models/rumor');
 const { getActiveSlot } = require('../../services/profileService');
@@ -22,7 +22,7 @@ module.exports = {
     if (!profile) {
       await interaction.reply({
         content: `Tu n’as pas de profil RP dans le **slot ${activeSlot}**.`,
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
       return;
     }
@@ -58,7 +58,8 @@ module.exports = {
 
     await interaction.reply({
       embeds: [embed],
-      components
+      components,
+      flags: MessageFlags.Ephemeral
     });
   }
 };

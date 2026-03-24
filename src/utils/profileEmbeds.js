@@ -123,6 +123,19 @@ function buildRelationsSummary(relations = []) {
   return truncate(preview.join('\n'), 1024);
 }
 
+function buildReputationSummary(profile) {
+  const positive = Number(profile.positiveReputation) || 0;
+  const negative = Number(profile.negativeReputation) || 0;
+  const balance = positive - negative;
+  const balanceText = balance > 0 ? `+${balance}` : `${balance}`;
+
+  return [
+    `🌟 **Réputation positive :** ${positive}`,
+    `🕸️ **Réputation négative :** ${negative}`,
+    `⚖️ **Balance :** ${balanceText}`
+  ].join('\n');
+}
+
 function formatDate(date) {
   if (!date) return 'Inconnue';
   const parsed = new Date(date);
@@ -181,6 +194,11 @@ function buildProfileEmbed(profile, targetUser, guild, page = 1) {
         {
           name: '📝 Description',
           value: truncate(profile.description || 'Aucune description.', 1024),
+          inline: false
+        },
+        {
+          name: '⭐ Réputation',
+          value: buildReputationSummary(profile),
           inline: false
         },
         {
