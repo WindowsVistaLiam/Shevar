@@ -1,6 +1,50 @@
-const { SlashCommandBuilder } = require('discord.js');
+const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const ShopItem = require('../../models/ShopItem');
 const { getActiveSlot, getProfileBySlot } = require('../../services/profileService');
+
+const EQUIPMENT_SLOTS = [
+  'tete',
+  'torse',
+  'jambes',
+  'pieds',
+  'mainDroite',
+  'mainGauche',
+  'accessoire1',
+  'accessoire2'
+];
+
+function unequipSoldItemIfNeeded(profile, inventoryItem) {
+  if (!profile?.equippedItems || !inventoryItem) return [];
+
+  const unequippedSlots = [];
+
+  for (const slot of EQUIPMENT_SLOTS) {
+    const equipped = profile.equippedItems?.[slot];
+    if (!equipped) continue;
+
+    const sameInventoryId =
+      equipped.inventoryItemId &&
+      inventoryItem._id &&
+      String(equipped.inventoryItemId) === String(inventoryItem._id);
+
+    const sameFallbackIdentity =
+      equipped.itemNameSnapshot &&
+      equipped.itemNameSnapshot.toLowerCase() === inventoryItem.name.toLowerCase() &&
+      (equipped.icon || '') === (inventoryItem.icon || '');
+
+    if (sameInventoryId || sameFallbackIdentity) {
+      profile.equippedItems[slot] = {
+        inventoryItemId: null,
+        itemNameSnapshot: '',
+        icon: ''
+      };
+
+      unequippedSlots.push(slot);
+    }
+  }
+
+  return unequippedSlots;
+}
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -31,7 +75,7 @@ module.exports = {
     if (!profile) {
       await interaction.reply({
         content: 'Tu n’as pas encore de profil actif valide.',
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
       return;
     }
@@ -45,41 +89,53 @@ module.exports = {
     if (!item) {
       await interaction.reply({
         content: `Aucun article actif trouvé avec l’ID **${itemId}**.`,
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
       return;
     }
 
-    const inventoryItem = profile.inventory.find(
-      entry => entry.name.toLowerCase() === item.name.toLowerCase()
+    const inventoryItem = profile.inventory.find(entry =>
+      entry.name.toLowerCase() === item.name.toLowerCase() &&
+      Boolean(entry.equipable) === Boolean(item.equipable) &&
+      (entry.equipmentSlot || '') === (item.equipmentSlot || '') &&
+      (entry.icon || '') === (item.icon || '')
     );
 
     if (!inventoryItem) {
       await interaction.reply({
         content: `Tu ne possèdes pas **${item.name}** sur ton profil actif.`,
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
       return;
     }
 
     if (inventoryItem.quantity < quantity) {
       await interaction.reply({
-        content:
-          `Tu n’as pas assez de **${item.name}**.\n` +
-          `Quantité disponible : **${inventoryItem.quantity}**.`,
-        ephemeral: true
+        content: [
+          `Tu n’as pas assez de **${item.name}**.`,
+          `Quantité disponible : **${inventoryItem.quantity}**.`
+        ].join('\n'),
+        flags: MessageFlags.Ephemeral
       });
       return;
     }
 
     const totalPrice = item.sellPrice * quantity;
-
     inventoryItem.quantity -= quantity;
 
+    let unequippedSlots = [];
+
     if (inventoryItem.quantity <= 0) {
-      profile.inventory = profile.inventory.filter(
-        entry => entry.name.toLowerCase() !== item.name.toLowerCase()
-      );
+      unequippedSlots = unequipSoldItemIfNeeded(profile, inventoryItem);
+
+      profile.inventory = profile.inventory.filter(entry => {
+        return !(
+          entry.name.toLowerCase() === inventoryItem.name.toLowerCase() &&
+          Boolean(entry.equipable) === Boolean(inventoryItem.equipable) &&
+          (entry.equipmentSlot || '') === (inventoryItem.equipmentSlot || '') &&
+          (entry.icon || '') === (inventoryItem.icon || '')
+        );
+      });
     }
 
     profile.wallet = (profile.wallet || 0) + totalPrice;
@@ -92,11 +148,15 @@ module.exports = {
     await profile.save();
 
     await interaction.reply({
-      content:
-        `💸 Vente effectuée : **${item.name}** ×${quantity}\n` +
-        `💰 Gain total : **${totalPrice}** Crawns\n` +
-        `👛 Nouveau portefeuille : **${profile.wallet}** Crawns`,
-      ephemeral: true
+      content: [
+        `✅ Vente effectuée : **${item.name}** ×${quantity}`,
+        `💰 Gain total : **${totalPrice}** Crawns`,
+        `🪙 Nouveau portefeuille : **${profile.wallet}** Crawns`,
+        unequippedSlots.length > 0
+          ? `🛡️ Déséquipé automatiquement depuis : **${unequippedSlots.join(', ')}**`
+          : null
+      ].filter(Boolean).join('\n'),
+      flags: MessageFlags.Ephemeral
     });
   }
 };
