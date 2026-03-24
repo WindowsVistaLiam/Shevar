@@ -1,112 +1,151 @@
 const { EmbedBuilder } = require('discord.js');
 
 function buildHelpEmbed(page = 1, guildName = 'Serveur RP') {
+
+  // PAGE 1 — PROFILS
   if (page === 1) {
     return new EmbedBuilder()
       .setColor(0x8e44ad)
       .setTitle('📘 Aide — Profils & Personnages')
-      .setDescription('Commandes liées aux profils RP et à leur gestion.')
+      .setDescription('Gestion de ton personnage RP et de ses informations.')
       .addFields(
         {
           name: '👤 Profils',
           value: [
-            '`/profil` — modifier le profil actif',
-            '`/profil-creer` — créer un profil dans un slot précis',
-            '`/profil-switch` — changer de profil actif',
-            '`/profil-supprimer` — supprimer l’un de tes profils',
-            '`/voir-profil` — consulter un profil',
-            '`/lister-profils` — lister les profils d’un joueur',
-            '`/metier` — modifier le métier du profil actif'
-          ].join('\n'),
-          inline: false
+            '`/profil` — modifier ton profil actif',
+            '`/profil-creer` — créer un personnage (slot)',
+            '`/profil-switch` — changer de personnage actif',
+            '`/profil-supprimer` — supprimer un personnage',
+            '`/voir-profil` — voir un profil',
+            '`/lister-profils` — voir les profils d’un joueur'
+          ].join('\n')
+        },
+        {
+          name: '🧾 Informations',
+          value: [
+            '`/metier` — modifier ton métier',
+            '`/relation` — gérer tes relations RP',
+            '`/equipement` — gérer ton équipement (visuel)'
+          ].join('\n')
         },
         {
           name: '🩸 Souillure',
           value: [
-            '`/repos` — réduire de 10% la souillure de ton profil actif'
-          ].join('\n'),
-          inline: false
+            '`/repos` — réduire ta souillure',
+            'La souillure influence ton état et ton RP'
+          ].join('\n')
         }
       )
       .setFooter({ text: `${guildName} • Aide • Page 1/4` })
       .setTimestamp();
   }
 
+  // PAGE 2 — ÉCONOMIE & INVENTAIRE
   if (page === 2) {
     return new EmbedBuilder()
       .setColor(0xc0392b)
-      .setTitle('💰 Aide — Économie & Boutique')
+      .setTitle('💰 Aide — Économie & Inventaire')
+      .setDescription('Gestion de ton argent et de tes objets.')
       .addFields(
         {
           name: '🛒 Boutique',
           value: [
             '`/boutique` — ouvrir la boutique',
-            '`/acheter` — acheter un article',
-            '`/vendre` — vendre un article'
-          ].join('\n'),
-          inline: false
+            '`/acheter` — acheter un objet',
+            '`/vendre` — vendre un objet'
+          ].join('\n')
         },
         {
-          name: '🎒 Infos utiles',
-          value: 'Le portefeuille et l’inventaire sont visibles dans la page 3 du profil.',
-          inline: false
+          name: '🎒 Inventaire',
+          value: [
+            '`/equipement` — équiper tes objets',
+            'Les objets équipés apparaissent sur la silhouette',
+            'Certains objets sont équipables selon leur type'
+          ].join('\n')
+        },
+        {
+          name: '💼 Informations',
+          value: [
+            'Ton portefeuille et ton inventaire sont visibles dans la page 3 du profil'
+          ].join('\n')
         }
       )
       .setFooter({ text: `${guildName} • Aide • Page 2/4` })
       .setTimestamp();
   }
 
+  // PAGE 3 — INTERACTIONS & RP
   if (page === 3) {
     return new EmbedBuilder()
       .setColor(0x16a085)
-      .setTitle('🤝 Aide — Échanges & Interactions')
+      .setTitle('🤝 Aide — Interactions & RP')
+      .setDescription('Interactions entre joueurs et mécaniques RP.')
       .addFields(
         {
           name: '🤲 Dons',
           value: [
-            '`/donner-argent` — proposer un don d’argent',
-            '`/donner-objet` — proposer un don d’objet'
-          ].join('\n'),
-          inline: false
+            '`/donner-argent` — donner de l’argent',
+            '`/donner-objet` — donner un objet'
+          ].join('\n')
         },
         {
           name: '🔄 Échanges',
           value: [
-            '`/echange` — ouvrir un panneau d’échange avec un autre joueur',
-            '`/historique-echanges` — voir les 10 derniers échanges'
-          ].join('\n'),
-          inline: false
+            '`/echange` — échanger avec un joueur',
+            '`/historique-echanges` — voir les échanges récents'
+          ].join('\n')
+        },
+        {
+          name: '🗣️ Rumeurs',
+          value: [
+            '`/rumeur` — créer une rumeur',
+            'Les rumeurs influencent la réputation'
+          ].join('\n')
+        },
+        {
+          name: '⭐ Réputation',
+          value: [
+            'Positive ou négative selon tes actions',
+            'Visible sur ton profil',
+            'Influence ton image RP'
+          ].join('\n')
         },
         {
           name: '🎲 RP',
           value: [
-            '`/roll` — lancer un ou plusieurs dés'
-          ].join('\n'),
-          inline: false
+            '`/roll` — lancer des dés'
+          ].join('\n')
         }
       )
       .setFooter({ text: `${guildName} • Aide • Page 3/4` })
       .setTimestamp();
   }
 
+  // PAGE 4 — ADMIN / MJ
   return new EmbedBuilder()
     .setColor(0x2c3e50)
     .setTitle('🛠️ Aide — Administration & MJ')
+    .setDescription('Commandes réservées aux MJ et administrateurs.')
     .addFields(
       {
         name: '👑 Profils',
         value: [
-          '`/supprimer-profil` — supprimer le profil d’un joueur'
-        ].join('\n'),
-        inline: false
+          '`/supprimer-profil` — supprimer un profil joueur'
+        ].join('\n')
       },
       {
         name: '🩸 Souillure',
         value: [
-          '`/heal` — retirer de la souillure à un joueur',
-          '`/ajouter-souillure` — ajouter de la souillure à un joueur'
-        ].join('\n'),
-        inline: false
+          '`/heal` — retirer de la souillure',
+          '`/ajouter-souillure` — ajouter de la souillure'
+        ].join('\n')
+      },
+      {
+        name: '⭐ Réputation',
+        value: [
+          '`/ajouter-reputation`',
+          '`/retirer-reputation`'
+        ].join('\n')
       },
       {
         name: '💰 Économie',
@@ -116,17 +155,22 @@ function buildHelpEmbed(page = 1, guildName = 'Serveur RP') {
           '`/retirer-argent`',
           '`/ajouter-objet`',
           '`/retirer-objet`'
-        ].join('\n'),
-        inline: false
+        ].join('\n')
       },
       {
         name: '🏪 Boutique',
         value: [
           '`/set-boutique-item`',
+          '`/set-icone-item`',
           '`/supprimer-boutique-item`',
           '`/lister-boutique-items`'
-        ].join('\n'),
-        inline: false
+        ].join('\n')
+      },
+      {
+        name: '🗞️ Rumeurs',
+        value: [
+          'Gestion des rumeurs (suppression / modération)'
+        ].join('\n')
       }
     )
     .setFooter({ text: `${guildName} • Aide • Page 4/4` })
