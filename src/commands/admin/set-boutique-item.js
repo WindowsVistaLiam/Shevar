@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } = require('discord.js');
 const ShopItem = require('../../models/ShopItem');
 
 module.exports = {
@@ -6,6 +6,7 @@ module.exports = {
     .setName('set-boutique-item')
     .setDescription('Créer ou modifier un article de la boutique')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+
     .addStringOption(option =>
       option
         .setName('item_id')
@@ -60,6 +61,35 @@ module.exports = {
         .setName('actif')
         .setDescription('Article actif ou non')
         .setRequired(true)
+    )
+    .addBooleanOption(option =>
+      option
+        .setName('equipable')
+        .setDescription('Cet article est-il équipable ?')
+        .setRequired(true)
+    )
+    .addStringOption(option =>
+      option
+        .setName('slot_equipement')
+        .setDescription('Slot d’équipement si équipable')
+        .setRequired(false)
+        .addChoices(
+          { name: 'Tête', value: 'tete' },
+          { name: 'Torse', value: 'torse' },
+          { name: 'Jambes', value: 'jambes' },
+          { name: 'Pieds', value: 'pieds' },
+          { name: 'Main droite', value: 'mainDroite' },
+          { name: 'Main gauche', value: 'mainGauche' },
+          { name: 'Accessoire 1', value: 'accessoire1' },
+          { name: 'Accessoire 2', value: 'accessoire2' }
+        )
+    )
+    .addStringOption(option =>
+      option
+        .setName('icone')
+        .setDescription('Nom du fichier icône dans src/assets/inventory/items/')
+        .setRequired(false)
+        .setMaxLength(100)
     ),
 
   async execute(interaction) {
@@ -72,11 +102,28 @@ module.exports = {
     const stock = interaction.options.getInteger('stock', true);
     const isActive = interaction.options.getBoolean('actif', true);
 
+    const equipable = interaction.options.getBoolean('equipable', true);
+    const equipmentSlot = interaction.options.getString('slot_equipement') || '';
+    const icon = (interaction.options.getString('icone') || '').trim();
+
+    if (equipable && !equipmentSlot) {
+      await interaction.reply({
+        content: 'Tu dois préciser un **slot d’équipement** si l’article est équipable.',
+        flags: MessageFlags.Ephemeral
+      });
+      return;
+    }
+
+    if (!equipable && equipmentSlot) {
+      await interaction.reply({
+        content: 'Tu as renseigné un **slot d’équipement** alors que l’article n’est pas équipable.',
+        flags: MessageFlags.Ephemeral
+      });
+      return;
+    }
+
     const item = await ShopItem.findOneAndUpdate(
-      {
-        guildId: interaction.guildId,
-        itemId
-      },
+      { guildId: interaction.guildId, itemId },
       {
         guildId: interaction.guildId,
         itemId,
@@ -86,7 +133,10 @@ module.exports = {
         buyPrice,
         sellPrice,
         stock,
-        isActive
+        isActive,
+        equipable,
+        equipmentSlot: equipable ? equipmentSlot : '',
+        icon: equipable ? icon : ''
       },
       {
         upsert: true,
@@ -96,14 +146,18 @@ module.exports = {
     );
 
     await interaction.reply({
-      content:
-        `✅ Article enregistré : **${item.name}**\n` +
-        `ID : **${item.itemId}**\n` +
-        `Achat : **${item.buyPrice}**\n` +
-        `Vente : **${item.sellPrice}**\n` +
-        `Stock : **${item.stock === -1 ? 'Illimité' : item.stock}**\n` +
+      content: [
+        `✅ Article enregistré : **${item.name}**`,
+        `ID : **${item.itemId}**`,
+        `Achat : **${item.buyPrice}**`,
+        `Vente : **${item.sellPrice}**`,
+        `Stock : **${item.stock === -1 ? 'Illimité' : item.stock}**`,
         `Actif : **${item.isActive ? 'Oui' : 'Non'}**`,
-      ephemeral: true
+        `Équipable : **${item.equipable ? 'Oui' : 'Non'}**`,
+        `Slot : **${item.equipmentSlot || 'Aucun'}**`,
+        `Icône : **${item.icon || 'Aucune'}**`
+      ].join('\n'),
+      flags: MessageFlags.Ephemeral
     });
   }
 };

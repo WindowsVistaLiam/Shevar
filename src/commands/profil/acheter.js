@@ -1,4 +1,4 @@
-const { SlashCommandBuilder } = require('discord.js');
+const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const ShopItem = require('../../models/ShopItem');
 const { getActiveSlot, getProfileBySlot } = require('../../services/profileService');
 
@@ -31,7 +31,7 @@ module.exports = {
     if (!profile) {
       await interaction.reply({
         content: 'Tu n’as pas encore de profil actif valide.',
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
       return;
     }
@@ -45,15 +45,15 @@ module.exports = {
     if (!item) {
       await interaction.reply({
         content: `Aucun article actif trouvé avec l’ID **${itemId}**.`,
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
       return;
     }
 
     if (item.stock !== -1 && item.stock < quantity) {
       await interaction.reply({
-        content: `Stock insuffisant pour **${item.name}**. Stock actuel : **${item.stock}**.`,
-        ephemeral: true
+        content: `Stock insuffisant pour **${item.name}**.\nStock actuel : **${item.stock}**.`,
+        flags: MessageFlags.Ephemeral
       });
       return;
     }
@@ -62,11 +62,12 @@ module.exports = {
 
     if ((profile.wallet || 0) < totalPrice) {
       await interaction.reply({
-        content:
-          `Tu n’as pas assez d’argent sur ton **profil actif (slot ${slot})**.\n` +
-          `Prix total : **${totalPrice}** Crawns\n` +
-          `Portefeuille actuel : **${profile.wallet || 0}** Crawns.`,
-        ephemeral: true
+        content: [
+          `Tu n’as pas assez d’argent sur ton **profil actif (slot ${slot})**.`,
+          `Prix total : **${totalPrice}** Crawns`,
+          `Portefeuille actuel : **${profile.wallet || 0}** Crawns.`
+        ].join('\n'),
+        flags: MessageFlags.Ephemeral
       });
       return;
     }
@@ -74,7 +75,11 @@ module.exports = {
     profile.wallet -= totalPrice;
 
     const existingItem = profile.inventory.find(
-      entry => entry.name.toLowerCase() === item.name.toLowerCase()
+      entry =>
+        entry.name.toLowerCase() === item.name.toLowerCase() &&
+        Boolean(entry.equipable) === Boolean(item.equipable) &&
+        (entry.equipmentSlot || '') === (item.equipmentSlot || '') &&
+        (entry.icon || '') === (item.icon || '')
     );
 
     if (existingItem) {
@@ -82,7 +87,10 @@ module.exports = {
     } else {
       profile.inventory.push({
         name: item.name,
-        quantity
+        quantity,
+        equipable: item.equipable || false,
+        equipmentSlot: item.equipable ? (item.equipmentSlot || '') : '',
+        icon: item.equipable ? (item.icon || '') : ''
       });
     }
 
@@ -94,11 +102,13 @@ module.exports = {
     await profile.save();
 
     await interaction.reply({
-      content:
-        `🛒 Achat effectué : **${item.name}** ×${quantity}\n` +
-        `💰 Coût total : **${totalPrice}** Crawns\n` +
-        `👛 Portefeuille restant : **${profile.wallet}** Crawns`,
-      ephemeral: true
+      content: [
+        `✅ Achat effectué : **${item.name}** ×${quantity}`,
+        `Coût total : **${totalPrice}** Crawns`,
+        `Portefeuille restant : **${profile.wallet}** Crawns`,
+        `Équipable : **${item.equipable ? 'Oui' : 'Non'}**${item.equipable ? ` (${item.equipmentSlot})` : ''}`
+      ].join('\n'),
+      flags: MessageFlags.Ephemeral
     });
   }
 };

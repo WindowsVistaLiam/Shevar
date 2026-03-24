@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } = require('discord.js');
 const Profile = require('../../models/Profile');
 const { getActiveSlot } = require('../../services/profileService');
 
@@ -34,6 +34,35 @@ module.exports = {
         .setRequired(false)
         .setMinValue(1)
         .setMaxValue(10)
+    )
+    .addBooleanOption(option =>
+      option
+        .setName('equipable')
+        .setDescription('Cet objet est-il équipable ?')
+        .setRequired(false)
+    )
+    .addStringOption(option =>
+      option
+        .setName('slot_equipement')
+        .setDescription('Slot d’équipement si équipable')
+        .setRequired(false)
+        .addChoices(
+          { name: 'Tête', value: 'tete' },
+          { name: 'Torse', value: 'torse' },
+          { name: 'Jambes', value: 'jambes' },
+          { name: 'Pieds', value: 'pieds' },
+          { name: 'Main droite', value: 'mainDroite' },
+          { name: 'Main gauche', value: 'mainGauche' },
+          { name: 'Accessoire 1', value: 'accessoire1' },
+          { name: 'Accessoire 2', value: 'accessoire2' }
+        )
+    )
+    .addStringOption(option =>
+      option
+        .setName('icone')
+        .setDescription('Nom du fichier icône dans src/assets/inventory/items/')
+        .setRequired(false)
+        .setMaxLength(100)
     ),
 
   async execute(interaction) {
@@ -42,6 +71,18 @@ module.exports = {
     const quantite = interaction.options.getInteger('quantite', true);
     const requestedSlot = interaction.options.getInteger('slot');
     const slot = requestedSlot || await getActiveSlot(interaction.guildId, targetUser.id);
+
+    const equipable = interaction.options.getBoolean('equipable') || false;
+    const equipmentSlot = interaction.options.getString('slot_equipement') || '';
+    const icon = (interaction.options.getString('icone') || '').trim();
+
+    if (equipable && !equipmentSlot) {
+      await interaction.reply({
+        content: 'Tu dois préciser un **slot d’équipement** si l’objet est équipable.',
+        flags: MessageFlags.Ephemeral
+      });
+      return;
+    }
 
     let profile = await Profile.findOne({
       guildId: interaction.guildId,
@@ -58,7 +99,11 @@ module.exports = {
     }
 
     const existingItem = profile.inventory.find(
-      item => item.name.toLowerCase() === nom.toLowerCase()
+      item =>
+        item.name.toLowerCase() === nom.toLowerCase() &&
+        Boolean(item.equipable) === Boolean(equipable) &&
+        (item.equipmentSlot || '') === (equipable ? equipmentSlot : '') &&
+        (item.icon || '') === (equipable ? icon : '')
     );
 
     if (existingItem) {
@@ -66,17 +111,24 @@ module.exports = {
     } else {
       profile.inventory.push({
         name: nom,
-        quantity: quantite
+        quantity: quantite,
+        equipable,
+        equipmentSlot: equipable ? equipmentSlot : '',
+        icon: equipable ? icon : ''
       });
     }
 
     await profile.save();
 
     await interaction.reply({
-      content:
-        `✅ Objet ajouté à **${targetUser.username}** ` +
-        `(**slot ${slot}**) : **${nom}** ×${quantite}`,
-      ephemeral: true
+      content: [
+        `✅ Objet ajouté à **${targetUser.username}** (**slot ${slot}**)`,
+        `Objet : **${nom}** ×${quantite}`,
+        `Équipable : **${equipable ? 'Oui' : 'Non'}**`,
+        `Slot équipement : **${equipable ? equipmentSlot : 'Aucun'}**`,
+        `Icône : **${equipable ? (icon || 'Aucune') : 'Aucune'}**`
+      ].join('\n'),
+      flags: MessageFlags.Ephemeral
     });
   }
 };
