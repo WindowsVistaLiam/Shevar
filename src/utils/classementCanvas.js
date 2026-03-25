@@ -97,10 +97,11 @@ async function drawPodiumEntry(ctx, entry, user, rank, x, y) {
   const name = entry.displayName || `User ${entry.userId}`;
   const value = entry.value;
 
-  // Texte podium : un peu plus bas + en noir
-  drawText(ctx, `#${rank}`, x + 50, y + 4, 22, 'center', '#111111');
-  drawText(ctx, name.slice(0, 20), x + 50, y + 132, 18, 'center', '#111111');
-  drawText(ctx, String(value), x + 50, y + 158, 16, 'center', '#111111');
+    ctx.shadowColor = 'rgba(0,0,0,0.4)';
+    ctx.shadowBlur = 4;
+    drawText(ctx, `#${rank}`, x + 50, y + 18, 22, 'center', '#111111');
+    drawText(ctx, name.slice(0, 20), x + 50, y + 150, 18, 'center', '#111111');
+    drawText(ctx, String(value), x + 50, y + 178, 16, 'center', '#111111');
 }
 
 async function drawList(ctx, entries, usersMap) {
