@@ -1,10 +1,10 @@
 const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const ShopItem = require('../../models/ShopItem');
 const { canManageReputation } = require('../../config/permissions');
-const { formatModifier, clampMarketModifier } = require('../../utils/marketUtils');
+const { formatModifier } = require('../../utils/marketUtils');
 
 function getRandomModifier() {
-  return Math.floor(Math.random() * 21) - 10; // -10 → +10
+  return Math.floor(Math.random() * 21) - 10;
 }
 
 async function applyToAllItems(guildId, callback) {
@@ -16,11 +16,10 @@ async function applyToAllItems(guildId, callback) {
   const changes = [];
 
   for (const item of items) {
-    const old = item.marketModifier || 0;
-
+    const old = Number(item.marketModifier) || 0;
     const next = callback(item, old);
 
-    item.marketModifier = clampMarketModifier(next);
+    item.marketModifier = Number(next) || 0;
     await item.save();
 
     changes.push({
@@ -34,46 +33,39 @@ async function applyToAllItems(guildId, callback) {
 }
 
 function buildPreview(changes) {
-  const preview = changes.slice(0, 10).map(c =>
-    `• **${c.name}** : ${formatModifier(c.old)} → ${formatModifier(c.new)}`
+  const preview = changes.slice(0, 10).map(change =>
+    `• **${change.name}** : ${formatModifier(change.old)} → ${formatModifier(change.new)}`
   );
 
   const remaining = changes.length - preview.length;
+  if (remaining > 0) {
+    preview.push(``);
+    preview.push(`… et **${remaining}** autre(s) objet(s)`);
+  }
 
-  return [
-    ...preview,
-    remaining > 0 ? `\n… et **${remaining}** autres objets` : ''
-  ].join('\n');
+  return preview.join('\n');
 }
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('market')
-    .setDescription('Gestion du marché global')
-
-    // 🎲 RANDOM
+    .setDescription('Gestion globale du marché')
     .addSubcommand(sub =>
       sub
         .setName('random')
-        .setDescription('Variation aléatoire du marché (-10% à +10%)')
+        .setDescription('Appliquer une variation aléatoire du marché à tous les objets')
     )
-
-    // 💥 CRASH
     .addSubcommand(sub =>
       sub
         .setName('crash')
-        .setDescription('Faire chuter le marché')
+        .setDescription('Faire baisser le marché')
         .addIntegerOption(option =>
           option
             .setName('valeur')
-            .setDescription('Baisse du marché (1 à 10)')
+            .setDescription('Baisse en pourcentage')
             .setRequired(true)
-            .setMinValue(1)
-            .setMaxValue(10)
         )
     )
-
-    // 📈 INFLATION
     .addSubcommand(sub =>
       sub
         .setName('inflation')
@@ -81,73 +73,85 @@ module.exports = {
         .addIntegerOption(option =>
           option
             .setName('valeur')
-            .setDescription('Hausse du marché (1 à 10)')
+            .setDescription('Hausse en pourcentage')
             .setRequired(true)
-            .setMinValue(1)
-            .setMaxValue(10)
         )
+    )
+    .addSubcommand(sub =>
+      sub
+        .setName('reset')
+        .setDescription('Remettre le marché à 0% sur tous les objets')
     ),
 
   async execute(interaction) {
     if (!canManageReputation(interaction.member)) {
       await interaction.reply({
-        content: "Tu n'as pas la permission.",
+        content: "Tu n'as pas la permission d'utiliser cette commande.",
         flags: MessageFlags.Ephemeral
       });
       return;
     }
 
-    const sub = interaction.options.getSubcommand();
+    const subcommand = interaction.options.getSubcommand();
 
-    let changes = [];
-
-    // 🎲 RANDOM
-    if (sub === 'random') {
-      changes = await applyToAllItems(interaction.guildId, () => {
-        return getRandomModifier();
-      });
+    if (subcommand === 'random') {
+      const changes = await applyToAllItems(interaction.guildId, () => getRandomModifier());
 
       await interaction.reply({
         content: [
-          `🎲 **Marché aléatoire appliqué (${changes.length} objets)**`,
+          `🎲 **Marché aléatoire appliqué**`,
+          `Objets modifiés : **${changes.length}**`,
           '',
           buildPreview(changes)
         ].join('\n'),
         flags: MessageFlags.Ephemeral
       });
+      return;
     }
 
-    // 💥 CRASH
-    if (sub === 'crash') {
+    if (subcommand === 'crash') {
       const value = interaction.options.getInteger('valeur', true);
 
-      changes = await applyToAllItems(interaction.guildId, (item, old) => {
-        return old - value;
-      });
+      const changes = await applyToAllItems(interaction.guildId, (item, old) => old - value);
 
       await interaction.reply({
         content: [
-          `💥 **Crash du marché (-${value}%)**`,
+          `💥 **Crash du marché**`,
+          `Variation appliquée : **-${value}%**`,
+          `Objets modifiés : **${changes.length}**`,
           '',
           buildPreview(changes)
         ].join('\n'),
         flags: MessageFlags.Ephemeral
       });
+      return;
     }
 
-    // 📈 INFLATION
-    if (sub === 'inflation') {
+    if (subcommand === 'inflation') {
       const value = interaction.options.getInteger('valeur', true);
 
-      changes = await applyToAllItems(interaction.guildId, (item, old) => {
-        return old + value;
-      });
+      const changes = await applyToAllItems(interaction.guildId, (item, old) => old + value);
 
       await interaction.reply({
         content: [
-          `📈 **Inflation du marché (+${value}%)**`,
+          `📈 **Inflation du marché**`,
+          `Variation appliquée : **+${value}%**`,
+          `Objets modifiés : **${changes.length}**`,
           '',
           buildPreview(changes)
+        ].join('\n'),
+        flags: MessageFlags.Ephemeral
+      });
+      return;
+    }
+
+    if (subcommand === 'reset') {
+      const changes = await applyToAllItems(interaction.guildId, () => 0);
+
+      await interaction.reply({
+        content: [
+          `🧼 **Marché réinitialisé**`,
+          `Objets remis à **0%** : **${changes.length}**`
         ].join('\n'),
         flags: MessageFlags.Ephemeral
       });

@@ -36,10 +36,8 @@ const shopItemSchema = new mongoose.Schema(
     iconUrl: { type: String, default: '' },
 
     marketModifier: {
-      type: Number,
-      default: 0,
-      min: -10,
-      max: 10
+    type: Number,
+    default: 0,
     }
   },
   { timestamps: true }

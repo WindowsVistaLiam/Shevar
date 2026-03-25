@@ -1,17 +1,17 @@
 function clampMarketModifier(value) {
-  const n = Number(value) || 0;
-  return Math.max(-10, Math.min(10, n));
+  return Number(value) || 0;
 }
 
 function applyMarketModifier(basePrice, modifierPercent) {
   const base = Math.max(0, Number(basePrice) || 0);
-  const modifier = clampMarketModifier(modifierPercent);
+  const modifier = Number(modifierPercent) || 0;
   const factor = 1 + modifier / 100;
-  return Math.max(0, Math.round(base * factor));
+
+  return Math.max(1, Math.round(base * factor));
 }
 
 function formatModifier(modifierPercent) {
-  const value = clampMarketModifier(modifierPercent);
+  const value = Number(modifierPercent) || 0;
   return value > 0 ? `+${value}%` : `${value}%`;
 }
 
