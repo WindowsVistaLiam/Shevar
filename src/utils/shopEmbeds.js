@@ -25,8 +25,9 @@ function buildShopEmbed({ items, page, totalPages, category, guildName }) {
               [
                 `**${item.name}** — \`${item.itemId}\``,
                 `${truncate(item.description, 160)}`,
-                `💰 Achat : **${item.buyPrice}** • 💸 Vente : **${item.sellPrice}**`,
-                `📦 Stock : **${formatStock(item.stock)}** • 🗂️ ${item.category}`
+                `💰 Achat : ${item.currentBuyPrice} (base ${item.buyPrice})`
+                `💸 Vente : ${item.currentSellPrice} (base ${item.sellPrice})`
+                `📈 Marché : ${item.marketLabel}`
               ].join('\n')
             )
             .join('\n\n')

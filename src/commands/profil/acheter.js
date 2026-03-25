@@ -1,6 +1,7 @@
 const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const ShopItem = require('../../models/ShopItem');
 const { getActiveSlot, getProfileBySlot } = require('../../services/profileService');
+const { applyMarketModifier, formatModifier } = require('../../utils/marketUtils');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -9,7 +10,7 @@ module.exports = {
     .addStringOption(option =>
       option
         .setName('item_id')
-        .setDescription('Identifiant de l’article')
+        .setDescription("Identifiant de l'article")
         .setRequired(true)
         .setMaxLength(50)
     )
@@ -30,7 +31,7 @@ module.exports = {
 
     if (!profile) {
       await interaction.reply({
-        content: 'Tu n’as pas encore de profil actif valide.',
+        content: "Tu n'as pas encore de profil actif valide.",
         flags: MessageFlags.Ephemeral
       });
       return;
@@ -44,7 +45,7 @@ module.exports = {
 
     if (!item) {
       await interaction.reply({
-        content: `Aucun article actif trouvé avec l’ID **${itemId}**.`,
+        content: `Aucun article actif trouvé avec l'ID **${itemId}**.`,
         flags: MessageFlags.Ephemeral
       });
       return;
@@ -58,14 +59,16 @@ module.exports = {
       return;
     }
 
-    const totalPrice = item.buyPrice * quantity;
+    const currentBuyPrice = applyMarketModifier(item.buyPrice, item.marketModifier);
+    const totalPrice = currentBuyPrice * quantity;
 
     if ((profile.wallet || 0) < totalPrice) {
       await interaction.reply({
         content: [
-          `Tu n’as pas assez d’argent sur ton **profil actif (slot ${slot})**.`,
+          `Tu n'as pas assez d'argent sur ton **profil actif (slot ${slot})**.`,
+          `Prix unitaire actuel : **${currentBuyPrice}** Crawns`,
           `Prix total : **${totalPrice}** Crawns`,
-          `Portefeuille actuel : **${profile.wallet || 0}** Crawns.`
+          `Portefeuille actuel : **${profile.wallet || 0}** Crawns`
         ].join('\n'),
         flags: MessageFlags.Ephemeral
       });
@@ -106,10 +109,11 @@ module.exports = {
     await interaction.reply({
       content: [
         `✅ Achat effectué : **${item.name}** ×${quantity}`,
+        `Variation marché : **${formatModifier(item.marketModifier || 0)}**`,
+        `Prix unitaire actuel : **${currentBuyPrice}** Crawns`,
         `Coût total : **${totalPrice}** Crawns`,
         `Portefeuille restant : **${profile.wallet}** Crawns`,
-        `Équipable : **${item.equipable ? 'Oui' : 'Non'}**${item.equipable ? ` (${item.equipmentSlot})` : ''}`,
-        `Icône URL : **${item.iconUrl || 'Aucune'}**`
+        `Équipable : **${item.equipable ? 'Oui' : 'Non'}**${item.equipable ? ` (${item.equipmentSlot})` : ''}`
       ].join('\n'),
       flags: MessageFlags.Ephemeral
     });

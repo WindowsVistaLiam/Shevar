@@ -6,6 +6,11 @@ const {
   buildShopCategoryRow
 } = require('../../utils/shopComponents');
 
+const {
+  applyMarketModifier,
+  formatModifier
+} = require('../../utils/marketUtils');
+
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('boutique')
@@ -35,21 +40,39 @@ module.exports = {
     }
 
     const categories = [...new Set(allActiveItems.map(item => item.category).filter(Boolean))];
+
     const category = requestedCategory && categories.includes(requestedCategory)
       ? requestedCategory
       : 'all';
 
-    const items = category === 'all'
+    const filteredItems = category === 'all'
       ? allActiveItems
       : allActiveItems.filter(item => item.category === category);
 
-    if (items.length === 0) {
+    if (filteredItems.length === 0) {
       await interaction.reply({
         content: `Aucun article actif dans la catégorie **${requestedCategory}**.`,
         ephemeral: true
       });
       return;
     }
+
+    // 🔥 APPLICATION DU MARCHÉ ICI
+    const items = filteredItems.map(item => {
+      const buy = applyMarketModifier(item.buyPrice, item.marketModifier);
+      const sell = applyMarketModifier(item.sellPrice, item.marketModifier);
+
+      return {
+        ...item,
+
+        // prix modifiés
+        currentBuyPrice: buy,
+        currentSellPrice: sell,
+
+        // affichage propre
+        marketLabel: formatModifier(item.marketModifier || 0)
+      };
+    });
 
     const page = 1;
     const totalPages = Math.max(1, Math.ceil(items.length / ITEMS_PER_PAGE));

@@ -1,6 +1,7 @@
 const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const ShopItem = require('../../models/ShopItem');
 const { getActiveSlot, getProfileBySlot } = require('../../services/profileService');
+const { applyMarketModifier, formatModifier } = require('../../utils/marketUtils');
 
 const EQUIPMENT_SLOTS = [
   'tete',
@@ -30,13 +31,15 @@ function unequipSoldItemIfNeeded(profile, inventoryItem) {
     const sameFallbackIdentity =
       equipped.itemNameSnapshot &&
       equipped.itemNameSnapshot.toLowerCase() === inventoryItem.name.toLowerCase() &&
-      (equipped.icon || '') === (inventoryItem.icon || '');
+      (equipped.icon || '') === (inventoryItem.icon || '') &&
+      (equipped.iconUrl || '') === (inventoryItem.iconUrl || '');
 
     if (sameInventoryId || sameFallbackIdentity) {
       profile.equippedItems[slot] = {
         inventoryItemId: null,
         itemNameSnapshot: '',
-        icon: ''
+        icon: '',
+        iconUrl: ''
       };
 
       unequippedSlots.push(slot);
@@ -53,7 +56,7 @@ module.exports = {
     .addStringOption(option =>
       option
         .setName('item_id')
-        .setDescription('Identifiant de l’article')
+        .setDescription("Identifiant de l'article")
         .setRequired(true)
         .setMaxLength(50)
     )
@@ -74,7 +77,7 @@ module.exports = {
 
     if (!profile) {
       await interaction.reply({
-        content: 'Tu n’as pas encore de profil actif valide.',
+        content: "Tu n'as pas encore de profil actif valide.",
         flags: MessageFlags.Ephemeral
       });
       return;
@@ -88,7 +91,7 @@ module.exports = {
 
     if (!item) {
       await interaction.reply({
-        content: `Aucun article actif trouvé avec l’ID **${itemId}**.`,
+        content: `Aucun article actif trouvé avec l'ID **${itemId}**.`,
         flags: MessageFlags.Ephemeral
       });
       return;
@@ -98,7 +101,8 @@ module.exports = {
       entry.name.toLowerCase() === item.name.toLowerCase() &&
       Boolean(entry.equipable) === Boolean(item.equipable) &&
       (entry.equipmentSlot || '') === (item.equipmentSlot || '') &&
-      (entry.icon || '') === (item.icon || '')
+      (entry.icon || '') === (item.icon || '') &&
+      (entry.iconUrl || '') === (item.iconUrl || '')
     );
 
     if (!inventoryItem) {
@@ -112,7 +116,7 @@ module.exports = {
     if (inventoryItem.quantity < quantity) {
       await interaction.reply({
         content: [
-          `Tu n’as pas assez de **${item.name}**.`,
+          `Tu n'as pas assez de **${item.name}**.`,
           `Quantité disponible : **${inventoryItem.quantity}**.`
         ].join('\n'),
         flags: MessageFlags.Ephemeral
@@ -120,7 +124,9 @@ module.exports = {
       return;
     }
 
-    const totalPrice = item.sellPrice * quantity;
+    const currentSellPrice = applyMarketModifier(item.sellPrice, item.marketModifier);
+    const totalPrice = currentSellPrice * quantity;
+
     inventoryItem.quantity -= quantity;
 
     let unequippedSlots = [];
@@ -133,7 +139,8 @@ module.exports = {
           entry.name.toLowerCase() === inventoryItem.name.toLowerCase() &&
           Boolean(entry.equipable) === Boolean(inventoryItem.equipable) &&
           (entry.equipmentSlot || '') === (inventoryItem.equipmentSlot || '') &&
-          (entry.icon || '') === (inventoryItem.icon || '')
+          (entry.icon || '') === (inventoryItem.icon || '') &&
+          (entry.iconUrl || '') === (inventoryItem.iconUrl || '')
         );
       });
     }
@@ -150,6 +157,8 @@ module.exports = {
     await interaction.reply({
       content: [
         `✅ Vente effectuée : **${item.name}** ×${quantity}`,
+        `Variation marché : **${formatModifier(item.marketModifier || 0)}**`,
+        `Prix unitaire actuel : **${currentSellPrice}** Crawns`,
         `💰 Gain total : **${totalPrice}** Crawns`,
         `🪙 Nouveau portefeuille : **${profile.wallet}** Crawns`,
         unequippedSlots.length > 0
