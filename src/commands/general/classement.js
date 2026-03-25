@@ -8,13 +8,14 @@ const {
 
 const Profile = require('../../models/Profile');
 const {
-  TYPES,
   getLabel,
   getModeLabel,
   formatValue,
   buildRanking,
   getPersonalRank,
-  paginateRanking
+  paginateRanking,
+  getNextType,
+  getPreviousType
 } = require('../../utils/classementUtils');
 const { createClassementAttachment } = require('../../utils/classementCanvas');
 const { getActiveSlot } = require('../../services/profileService');
@@ -23,22 +24,28 @@ function buildButtons(ownerUserId, page, totalPages, type, mode) {
   return [
     new ActionRowBuilder().addComponents(
       new ButtonBuilder()
-        .setCustomId(`classement:prev:${ownerUserId}:${page}:${type}:${mode}`)
-        .setEmoji('⬅️')
+        .setCustomId(`classement:page_prev:${ownerUserId}:${page}:${type}:${mode}`)
+        .setLabel('⬅️ Page')
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(page <= 1),
       new ButtonBuilder()
-        .setCustomId(`classement:next:${ownerUserId}:${page}:${type}:${mode}`)
-        .setEmoji('➡️')
+        .setCustomId(`classement:page_next:${ownerUserId}:${page}:${type}:${mode}`)
+        .setLabel('Page ➡️')
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(page >= totalPages),
       new ButtonBuilder()
-        .setCustomId(`classement:mode:${ownerUserId}:${page}:${type}:${mode}`)
-        .setLabel('Mode')
-        .setStyle(ButtonStyle.Primary),
+        .setCustomId(`classement:toggle_mode:${ownerUserId}:${page}:${type}:${mode}`)
+        .setLabel(`Mode: ${mode}`)
+        .setStyle(ButtonStyle.Primary)
+    ),
+    new ActionRowBuilder().addComponents(
       new ButtonBuilder()
-        .setCustomId(`classement:type:${ownerUserId}:${page}:${type}:${mode}`)
-        .setLabel('Type')
+        .setCustomId(`classement:type_prev:${ownerUserId}:${page}:${type}:${mode}`)
+        .setLabel('⬅️ Type')
+        .setStyle(ButtonStyle.Success),
+      new ButtonBuilder()
+        .setCustomId(`classement:type_next:${ownerUserId}:${page}:${type}:${mode}`)
+        .setLabel('Type ➡️')
         .setStyle(ButtonStyle.Success)
     )
   ];
@@ -73,18 +80,22 @@ async function buildClassementPayload({ client, guild, guildId, viewerId, viewer
   }));
 
   const usersMap = await buildUsersMap(client, itemsWithRank);
-
-  const personalRank = getPersonalRank(ranking, viewerId, viewerSlot, mode);
-  const personalEntry = personalRank > 0 ? ranking[personalRank - 1] : null;
-
   const attachment = await createClassementAttachment({
-    guildName: guild.name,
-    type,
-    mode,
-    page: paginated.page,
     paginatedItems: itemsWithRank,
     usersMap
   });
+
+  const lines = itemsWithRank.map(entry => {
+    const prefix = entry.rank <= 3 ? ['🥇', '🥈', '🥉'][entry.rank - 1] : `**${entry.rank}.**`;
+    const name = mode === 'joueur'
+      ? `<@${entry.userId}>`
+      : `${entry.displayName} *(slot ${entry.slot})*`;
+
+    return `${prefix} ${name} — **${formatValue(type, entry.value)}**`;
+  });
+
+  const personalRank = getPersonalRank(ranking, viewerId, viewerSlot, mode);
+  const personalEntry = personalRank > 0 ? ranking[personalRank - 1] : null;
 
   const embed = new EmbedBuilder()
     .setColor(0xf1c40f)
@@ -95,7 +106,9 @@ async function buildClassementPayload({ client, guild, guildId, viewerId, viewer
         `**Page :** ${paginated.page}/${paginated.totalPages}`,
         personalRank > 0
           ? `📍 **Ton classement :** #${personalRank} — **${formatValue(type, personalEntry.value)}**`
-          : `📍 **Ton classement :** non classé`
+          : '📍 **Ton classement :** non classé',
+        '',
+        lines.join('\n')
       ].join('\n')
     )
     .setImage('attachment://classement-podium.png')

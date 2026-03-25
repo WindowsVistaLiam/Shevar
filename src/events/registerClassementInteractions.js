@@ -1,5 +1,5 @@
 const { MessageFlags } = require('discord.js');
-const { TYPES } = require('../utils/classementUtils');
+const { getNextType, getPreviousType } = require('../utils/classementUtils');
 const { buildClassementPayload } = require('../commands/general/classement');
 const { getActiveSlot } = require('../services/profileService');
 
@@ -23,17 +23,18 @@ module.exports = function registerClassementInteractions(client) {
       let nextType = type;
       let nextMode = mode;
 
-      if (action === 'prev') page = Math.max(1, page - 1);
-      if (action === 'next') page += 1;
-
-      if (action === 'mode') {
+      if (action === 'page_prev') {
+        page = Math.max(1, page - 1);
+      } else if (action === 'page_next') {
+        page += 1;
+      } else if (action === 'toggle_mode') {
         nextMode = mode === 'profil' ? 'joueur' : 'profil';
         page = 1;
-      }
-
-      if (action === 'type') {
-        const index = TYPES.indexOf(type);
-        nextType = TYPES[(index + 1) % TYPES.length];
+      } else if (action === 'type_prev') {
+        nextType = getPreviousType(type);
+        page = 1;
+      } else if (action === 'type_next') {
+        nextType = getNextType(type);
         page = 1;
       }
 
@@ -51,14 +52,20 @@ module.exports = function registerClassementInteractions(client) {
       });
 
       await interaction.update(payload);
-
     } catch (error) {
       console.error('❌ Erreur interactions classement :', error);
 
-      await interaction.reply({
-        content: 'Erreur lors de la navigation.',
-        flags: MessageFlags.Ephemeral
-      }).catch(() => {});
+      if (interaction.replied || interaction.deferred) {
+        await interaction.followUp({
+          content: 'Une erreur est survenue pendant la navigation du classement.',
+          flags: MessageFlags.Ephemeral
+        }).catch(() => {});
+      } else {
+        await interaction.reply({
+          content: 'Une erreur est survenue pendant la navigation du classement.',
+          flags: MessageFlags.Ephemeral
+        }).catch(() => {});
+      }
     }
   });
 };

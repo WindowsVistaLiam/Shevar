@@ -26,22 +26,16 @@ function getValue(profile, type) {
   switch (type) {
     case 'titles':
       return Array.isArray(profile.titles) ? profile.titles.length : 0;
-
     case 'reputation_positive':
       return Number(profile.positiveReputation) || 0;
-
     case 'reputation_negative':
       return Number(profile.negativeReputation) || 0;
-
     case 'relations':
       return Array.isArray(profile.relations) ? profile.relations.length : 0;
-
     case 'rp_messages':
       return Number(profile.rpMessages) || 0;
-
     case 'souillure':
       return Number(profile.souillure) || 0;
-
     default:
       return 0;
   }
@@ -76,17 +70,11 @@ function buildRanking(profiles, type, mode) {
         id: profile.userId,
         userId: profile.userId,
         displayName: null,
-        slots: [],
         value: 0
       });
     }
 
-    const entry = grouped.get(profile.userId);
-    entry.value += getValue(profile, type);
-    entry.slots.push({
-      slot: profile.slot,
-      name: profile.nomPrenom || `Profil ${profile.slot}`
-    });
+    grouped.get(profile.userId).value += getValue(profile, type);
   }
 
   return Array.from(grouped.values()).sort((a, b) => b.value - a.value);
@@ -114,6 +102,16 @@ function paginateRanking(ranking, page = 1, perPage = 10) {
   };
 }
 
+function getNextType(type) {
+  const index = TYPES.indexOf(type);
+  return TYPES[(index + 1) % TYPES.length];
+}
+
+function getPreviousType(type) {
+  const index = TYPES.indexOf(type);
+  return TYPES[(index - 1 + TYPES.length) % TYPES.length];
+}
+
 module.exports = {
   TYPES,
   getLabel,
@@ -122,5 +120,7 @@ module.exports = {
   formatValue,
   buildRanking,
   getPersonalRank,
-  paginateRanking
+  paginateRanking,
+  getNextType,
+  getPreviousType
 };
