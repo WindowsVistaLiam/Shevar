@@ -63,6 +63,20 @@ function buildHelpEmbed(page = 1, guildName = 'Serveur RP') {
             'Certains objets sont équipables selon leur type'
           ].join('\n')
         },
+                {
+          name: '🤲 Dons',
+          value: [
+            '`/donner-argent` — donner de l’argent',
+            '`/donner-objet` — donner un objet'
+          ].join('\n')
+        },
+        {
+          name: '🔄 Échanges',
+          value: [
+            '`/echange` — échanger avec un joueur',
+            '`/historique-echanges` — voir les échanges récents'
+          ].join('\n')
+        },
         {
           name: '💼 Informations',
           value: [
@@ -81,20 +95,6 @@ function buildHelpEmbed(page = 1, guildName = 'Serveur RP') {
       .setTitle('🤝 Aide — Interactions & RP')
       .setDescription('Interactions entre joueurs et mécaniques RP.')
       .addFields(
-        {
-          name: '🤲 Dons',
-          value: [
-            '`/donner-argent` — donner de l’argent',
-            '`/donner-objet` — donner un objet'
-          ].join('\n')
-        },
-        {
-          name: '🔄 Échanges',
-          value: [
-            '`/echange` — échanger avec un joueur',
-            '`/historique-echanges` — voir les échanges récents'
-          ].join('\n')
-        },
         {
           name: '🗣️ Rumeurs',
           value: [
