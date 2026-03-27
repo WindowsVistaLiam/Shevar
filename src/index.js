@@ -18,6 +18,7 @@ const registerRumorInteractions = require('./events/registerRumorInteractions');
 const registerReputationHistoryNavigation = require('./events/registerReputationHistoryNavigation');
 const registerEquipmentInteractions = require('./events/registerEquipmentInteractions');
 const registerClassementInteractions = require('./events/registerClassementInteractions');
+const registerMapInteractions = require('./events/registerMapInteractions');
 
 const client = new Client({
   intents: [
