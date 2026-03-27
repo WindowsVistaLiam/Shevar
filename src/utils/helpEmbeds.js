@@ -119,7 +119,7 @@ function buildHelpEmbed(page = 1, guildName = 'Serveur RP') {
         {
           name: '🏅 Classement',
           value: [
-            '`/classement - voir ses différents classements'
+            '`/classement` - voir ses différents classements'
           ].join('\n')
         },
         {
