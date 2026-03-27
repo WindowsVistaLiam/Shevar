@@ -103,6 +103,7 @@ registerRumorInteractions(client);
 registerReputationHistoryNavigation(client);
 registerEquipmentInteractions(client);
 registerClassementInteractions(client);
+registerMapInteractions(client);
 
 (async () => {
   await connectDatabase();
