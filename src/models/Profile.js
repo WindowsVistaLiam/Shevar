@@ -1,29 +1,49 @@
 const mongoose = require('mongoose');
 
-const inventoryItemSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  quantity: { type: Number, default: 1, min: 1 },
+const inventoryItemSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true },
+    quantity: { type: Number, default: 1 },
 
-  equipable: { type: Boolean, default: false },
-  equipmentSlot: {
-    type: String,
-    enum: [
-      '',
-      'tete',
-      'torse',
-      'jambes',
-      'pieds',
-      'mainDroite',
-      'mainGauche',
-      'accessoire1',
-      'accessoire2'
-    ],
-    default: ''
+    // équipement
+    equipable: { type: Boolean, default: false },
+    equipmentSlot: { type: String, default: '' },
+
+    icon: { type: String, default: '' },
+    iconUrl: { type: String, default: '' }
   },
+  { _id: true }
+);
 
-  icon: { type: String, default: '' },
-  iconUrl: { type: String, default: '' }
-});
+const relationSchema = new mongoose.Schema(
+  {
+    targetUserId: { type: String, required: true },
+    targetSlot: { type: Number, default: 1 },
+
+    targetProfileNameSnapshot: { type: String, default: '' },
+
+    type: {
+      type: String,
+      enum: [
+        'allie',
+        'rival',
+        'famille',
+        'mentor',
+        'disciple',
+        'amour',
+        'haine',
+        'neutre',
+        'autre'
+      ],
+      default: 'autre'
+    },
+
+    description: { type: String, default: '' },
+
+    createdAt: { type: Date, default: Date.now }
+  },
+  { _id: true }
+);
 
 const titleSchema = new mongoose.Schema(
   {
@@ -37,81 +57,127 @@ const titleSchema = new mongoose.Schema(
   { _id: false }
 );
 
-const relationSchema = new mongoose.Schema(
-  {
-    targetUserId: { type: String, required: true },
-    targetSlot: { type: Number, required: true, min: 1, max: 10 },
-    targetProfileNameSnapshot: { type: String, default: '' },
-    type: {
-      type: String,
-      enum: ['allie', 'rival', 'famille', 'mentor', 'disciple', 'amour', 'haine', 'neutre', 'autre'],
-      default: 'autre'
-    },
-    description: { type: String, default: '', maxlength: 300 },
-    createdAt: { type: Date, default: Date.now }
-  },
-  { _id: true }
-);
-
-const equippedSlotSchema = new mongoose.Schema(
-  {
-    inventoryItemId: { type: mongoose.Schema.Types.ObjectId, default: null },
-    itemNameSnapshot: { type: String, default: '' },
-    icon: { type: String, default: '' },
-    iconUrl: { type: String, default: '' }
-  },
-  { _id: false }
-);
-
 const profileSchema = new mongoose.Schema(
   {
     guildId: { type: String, required: true, index: true },
     userId: { type: String, required: true, index: true },
-    slot: { type: Number, required: true, min: 1, max: 10 },
 
+    slot: { type: Number, default: 1 },
+
+    // 🧑 Identité
     nomPrenom: { type: String, default: '' },
     ageGenre: { type: String, default: '' },
-    pouvoir: { type: String, default: '' },
     description: { type: String, default: '' },
+    pouvoir: { type: String, default: '' },
+    metier: { type: String, default: '' },
+
     imageUrl: { type: String, default: '' },
-    metier: { type: String, default: 'Sans métier' },
 
-    equippedTitle: { type: String, default: '' },
-    titles: { type: [titleSchema], default: [] },
+    // 🗺️ Position (NOUVEAU)
+    location: { type: String, default: 'Aucune' },
 
-    rpMessages: { type: Number, default: 0, min: 0 },
-    rpLevel: { type: Number, default: 1, min: 1, max: 50 },
+    // 🩸 Souillure
+    souillure: { type: Number, default: 0 },
 
-    wallet: { type: Number, default: 0, min: 0 },
+    // 💰 Économie
+    wallet: { type: Number, default: 0 },
+
+    // 🎒 Inventaire
     inventory: { type: [inventoryItemSchema], default: [] },
 
+    // 🛡️ Équipement
     equippedItems: {
-      tete: { type: equippedSlotSchema, default: () => ({}) },
-      torse: { type: equippedSlotSchema, default: () => ({}) },
-      jambes: { type: equippedSlotSchema, default: () => ({}) },
-      pieds: { type: equippedSlotSchema, default: () => ({}) },
-      mainDroite: { type: equippedSlotSchema, default: () => ({}) },
-      mainGauche: { type: equippedSlotSchema, default: () => ({}) },
-      accessoire1: { type: equippedSlotSchema, default: () => ({}) },
-      accessoire2: { type: equippedSlotSchema, default: () => ({}) }
+      tete: {
+        inventoryItemId: { type: mongoose.Schema.Types.ObjectId, default: null },
+        itemNameSnapshot: { type: String, default: '' },
+        icon: { type: String, default: '' },
+        iconUrl: { type: String, default: '' }
+      },
+      torse: {
+        inventoryItemId: { type: mongoose.Schema.Types.ObjectId, default: null },
+        itemNameSnapshot: { type: String, default: '' },
+        icon: { type: String, default: '' },
+        iconUrl: { type: String, default: '' }
+      },
+      jambes: {
+        inventoryItemId: { type: mongoose.Schema.Types.ObjectId, default: null },
+        itemNameSnapshot: { type: String, default: '' },
+        icon: { type: String, default: '' },
+        iconUrl: { type: String, default: '' }
+      },
+      pieds: {
+        inventoryItemId: { type: mongoose.Schema.Types.ObjectId, default: null },
+        itemNameSnapshot: { type: String, default: '' },
+        icon: { type: String, default: '' },
+        iconUrl: { type: String, default: '' }
+      },
+      mainDroite: {
+        inventoryItemId: { type: mongoose.Schema.Types.ObjectId, default: null },
+        itemNameSnapshot: { type: String, default: '' },
+        icon: { type: String, default: '' },
+        iconUrl: { type: String, default: '' }
+      },
+      mainGauche: {
+        inventoryItemId: { type: mongoose.Schema.Types.ObjectId, default: null },
+        itemNameSnapshot: { type: String, default: '' },
+        icon: { type: String, default: '' },
+        iconUrl: { type: String, default: '' }
+      },
+      accessoire1: {
+        inventoryItemId: { type: mongoose.Schema.Types.ObjectId, default: null },
+        itemNameSnapshot: { type: String, default: '' },
+        icon: { type: String, default: '' },
+        iconUrl: { type: String, default: '' }
+      },
+      accessoire2: {
+        inventoryItemId: { type: mongoose.Schema.Types.ObjectId, default: null },
+        itemNameSnapshot: { type: String, default: '' },
+        icon: { type: String, default: '' },
+        iconUrl: { type: String, default: '' }
+      }
     },
 
-    souillure: { type: Number, default: 0, min: 0, max: 100 },
+    // 🤝 Relations
+    relations: { type: [relationSchema], default: [] },
 
-    positiveReputation: { type: Number, default: 0, min: 0 },
-    negativeReputation: { type: Number, default: 0, min: 0 },
+    // 🏅 Titres
+    titles: { type: [titleSchema], default: [] },
+    equippedTitle: { type: String, default: '' },
 
-    backgroundImageUrl: { type: String, default: '' },
-    backgroundImageApprovedBy: { type: String, default: '' },
+    // 📈 Progression RP
+    rpMessages: { type: Number, default: 0 },
+    rpLevel: { type: Number, default: 1 },
 
-    relations: {
-      type: [relationSchema],
-      default: []
-    }
+    // ⭐ Réputation
+    positiveReputation: { type: Number, default: 0 },
+    negativeReputation: { type: Number, default: 0 },
+
+    reputationHistory: [
+      {
+        type: {
+          type: String,
+          enum: ['positive', 'negative']
+        },
+        amount: Number,
+        reason: String,
+        authorId: String,
+        createdAt: { type: Date, default: Date.now }
+      }
+    ],
+
+    // 🎒 Image personnalisée inventaire
+    customBackground: { type: String, default: '' }
   },
-  { timestamps: true }
+  {
+    timestamps: true
+  }
 );
 
-profileSchema.index({ guildId: 1, userId: 1, slot: 1 }, { unique: true });
+// 🔒 Index unique (1 profil par slot)
+profileSchema.index(
+  { guildId: 1, userId: 1, slot: 1 },
+  { unique: true }
+);
 
-module.exports = mongoose.models.Profile || mongoose.model('Profile', profileSchema);
+module.exports =
+  mongoose.models.Profile || mongoose.model('Profile', profileSchema);
