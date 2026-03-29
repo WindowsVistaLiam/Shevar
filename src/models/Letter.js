@@ -2,18 +2,18 @@ const mongoose = require('mongoose');
 
 const letterSchema = new mongoose.Schema(
   {
-    guildId: { type: String, required: true, index: true },
+    guildId: String,
 
-    senderId: { type: String, required: true, index: true },
-    receiverId: { type: String, required: true, index: true },
+    senderId: String,
+    receiverId: String,
 
-    senderNameSnapshot: { type: String, default: '' },
-    receiverNameSnapshot: { type: String, default: '' },
+    senderNameSnapshot: String,
+    receiverNameSnapshot: String,
 
-    content: { type: String, required: true, maxlength: 4000 },
-    subject: { type: String, default: '', maxlength: 120 },
+    subject: String,
+    content: String,
 
-    location: { type: String, default: 'Aucune' },
+    location: String,
 
     status: {
       type: String,
@@ -21,14 +21,14 @@ const letterSchema = new mongoose.Schema(
       default: 'sent'
     },
 
-    interceptedBy: { type: [String], default: [] },
-    interceptedCount: { type: Number, default: 0 },
+    isAnonymous: { type: Boolean, default: false },
 
-    isAnonymous: { type: Boolean, default: false }
+    interceptedBy: [String],
+
+    // 🆕 conversation
+    replyTo: { type: mongoose.Schema.Types.ObjectId, default: null }
   },
-  {
-    timestamps: true
-  }
+  { timestamps: true }
 );
 
 module.exports =
