@@ -1,119 +1,108 @@
 const {
+  EmbedBuilder,
+  AttachmentBuilder,
   ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
-  MessageFlags
+  StringSelectMenuBuilder,
+  MessageFlags,
 } = require('discord.js');
 
 const Profile = require('../models/Profile');
 const { LOCATIONS } = require('../config/mapLocations');
 const { getActiveSlot } = require('../services/profileService');
 
+function buildMapSelectMenu(ownerUserId, selectedLocation = '') {
+  return new ActionRowBuilder().addComponents(
+    new StringSelectMenuBuilder()
+      .setCustomId(`map_select:${ownerUserId}`)
+      .setPlaceholder('Choisis ta destination')
+      .addOptions(
+        LOCATIONS.map(location => ({
+          label: location,
+          value: location,
+          description:
+            location === selectedLocation
+              ? 'Position actuelle'
+              : `Se déplacer vers ${location}`,
+          default: location === selectedLocation,
+        }))
+      )
+  );
+}
+
 module.exports = function registerMapInteractions(client) {
   client.on('interactionCreate', async interaction => {
     try {
-      if (!interaction.isButton()) return;
-      if (!interaction.customId.startsWith('map:')) return;
+      if (!interaction.isStringSelectMenu()) return;
+      if (!interaction.customId.startsWith('map_select:')) return;
 
-      const parts = interaction.customId.split(':');
-      const action = parts[1];
-      const ownerId = parts[2];
+      const [, ownerUserId] = interaction.customId.split(':');
 
-      // 🔒 sécurité utilisateur
-      if (interaction.user.id !== ownerId) {
-        return interaction.reply({
-          content: "Ce menu ne t'appartient pas.",
-          flags: MessageFlags.Ephemeral
+      if (interaction.user.id !== ownerUserId) {
+        await interaction.reply({
+          content: 'Ce menu ne t’appartient pas.',
+          flags: MessageFlags.Ephemeral,
         });
+        return;
       }
 
-      // ⚡ important : defer pour éviter "interaction failed"
-      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-
+      const selectedLocation = interaction.values[0];
       const slot = await getActiveSlot(interaction.guildId, interaction.user.id);
 
       const profile = await Profile.findOne({
         guildId: interaction.guildId,
         userId: interaction.user.id,
-        slot
+        slot,
       });
 
       if (!profile) {
-        return interaction.editReply({
-          content: "Profil introuvable."
+        await interaction.reply({
+          content: `Tu n’as pas de profil dans le **slot ${slot}**.`,
+          flags: MessageFlags.Ephemeral,
         });
+        return;
       }
 
-      // 🌍 CHOISIR POSITION
-      if (action === 'set') {
-        const buttons = LOCATIONS.map(loc =>
-          new ButtonBuilder()
-            .setCustomId(`map:select:${interaction.user.id}:${loc}`)
-            .setLabel(loc)
-            .setStyle(ButtonStyle.Secondary)
-        );
+      profile.location = selectedLocation;
+      await profile.save();
 
-        const rows = [];
-        while (buttons.length) {
-          rows.push(new ActionRowBuilder().addComponents(buttons.splice(0, 5)));
-        }
+      const file = new AttachmentBuilder('src/assets/map.png', {
+        name: 'map.png',
+      });
 
-        return interaction.editReply({
-          content: "🌍 Choisis ta position :",
-          components: rows
-        });
-      }
+      const embed = new EmbedBuilder()
+        .setColor(0x2b2d31)
+        .setTitle('🗺️ Carte de Shevar')
+        .setDescription(
+          [
+            `**Position actuelle :** ${selectedLocation}`,
+            '',
+            'Ta localisation a bien été mise à jour.',
+          ].join('\n')
+        )
+        .setImage('attachment://map.png')
+        .setFooter({
+          text: `${interaction.guild?.name || 'Serveur RP'} • Slot ${slot}`,
+        })
+        .setTimestamp();
 
-      // 👀 VOIR JOUEURS
-      if (action === 'view') {
-        if (!profile.location || profile.location === 'Aucune') {
-          return interaction.editReply({
-            content: "Tu n'as pas encore de position."
-          });
-        }
+      await interaction.update({
+        embeds: [embed],
+        files: [file],
+        components: [buildMapSelectMenu(interaction.user.id, selectedLocation)],
+      });
+    } catch (error) {
+      console.error('❌ Erreur interactions map :', error);
 
-        const players = await Profile.find({
-          guildId: interaction.guildId,
-          location: profile.location
-        });
-
-        const list = players
-          .map(p => `• ${p.nomPrenom || 'Sans nom'}`)
-          .slice(0, 15);
-
-        return interaction.editReply({
-          content:
-            list.length > 0
-              ? `👥 Joueurs à **${profile.location}** :\n${list.join('\n')}`
-              : "Aucun joueur ici."
-        });
-      }
-
-      // 📍 SELECTION POSITION
-      if (action === 'select') {
-        const location = parts[3];
-
-        profile.location = location;
-        await profile.save();
-
-        return interaction.editReply({
-          content: `📍 Tu es maintenant à **${location}**.`
-        });
-      }
-
-    } catch (err) {
-      console.error('❌ Map interaction error:', err);
-
-      // ⚠️ fallback pour éviter erreur Discord
-      if (interaction.deferred || interaction.replied) {
-        await interaction.editReply({
-          content: "Une erreur est survenue."
-        });
+      if (interaction.replied || interaction.deferred) {
+        await interaction.followUp({
+          content: 'Une erreur est survenue pendant la mise à jour de la position.',
+          flags: MessageFlags.Ephemeral,
+        }).catch(() => {});
       } else {
         await interaction.reply({
-          content: "Une erreur est survenue.",
-          flags: MessageFlags.Ephemeral
-        });
+          content: 'Une erreur est survenue pendant la mise à jour de la position.',
+          flags: MessageFlags.Ephemeral,
+        }).catch(() => {});
       }
     }
   });
