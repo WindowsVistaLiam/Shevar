@@ -3,16 +3,11 @@ require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 const { Client, Collection, GatewayIntentBits, Partials } = require('discord.js');
-
 const { connectDatabase } = require('./config/database');
 
 const registerModals = require('./events/registerModals');
 const registerProfileNavigation = require('./events/registerProfileNavigation');
-const registerTradeInteractions = require('./events/registerTradeInteractions');
-const registerShopNavigation = require('./events/registerShopNavigation');
 const registerHelpNavigation = require('./events/registerHelpNavigation');
-const registerExchangeDraftInteractions = require('./events/registerExchangeDraftInteractions');
-const registerExchangeConfirmations = require('./events/registerExchangeConfirmations');
 const registerRelationInteractions = require('./events/registerRelationInteractions');
 const registerRumorInteractions = require('./events/registerRumorInteractions');
 const registerReputationHistoryNavigation = require('./events/registerReputationHistoryNavigation');
@@ -25,9 +20,9 @@ const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent
+    GatewayIntentBits.MessageContent,
   ],
-  partials: [Partials.Channel]
+  partials: [Partials.Channel],
 });
 
 client.commands = new Collection();
@@ -65,13 +60,14 @@ if (fs.existsSync(commandsPath)) {
 const excludedEventFiles = new Set([
   'registerModals.js',
   'registerProfileNavigation.js',
-  'registerTradeInteractions.js',
-  'registerShopNavigation.js',
   'registerHelpNavigation.js',
-  'registerExchangeDraftInteractions.js',
-  'registerExchangeConfirmations.js',
   'registerRelationInteractions.js',
-  'registerRumorInteractions.js'
+  'registerRumorInteractions.js',
+  'registerReputationHistoryNavigation.js',
+  'registerEquipmentInteractions.js',
+  'registerClassementInteractions.js',
+  'registerMapInteractions.js',
+  'registerLetterInteractions.js',
 ]);
 
 const eventsPath = path.join(__dirname, 'events');
@@ -95,11 +91,7 @@ if (fs.existsSync(eventsPath)) {
 
 registerModals(client);
 registerProfileNavigation(client);
-registerTradeInteractions(client);
-registerShopNavigation(client);
 registerHelpNavigation(client);
-registerExchangeDraftInteractions(client);
-registerExchangeConfirmations(client);
 registerRelationInteractions(client);
 registerRumorInteractions(client);
 registerReputationHistoryNavigation(client);

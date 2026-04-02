@@ -4,7 +4,8 @@ const TYPES = [
   'reputation_negative',
   'relations',
   'rp_messages',
-  'souillure'
+  'xp',
+  'rp_level',
 ];
 
 function getLabel(type) {
@@ -14,7 +15,8 @@ function getLabel(type) {
     reputation_negative: 'Réputation négative',
     relations: 'Relations',
     rp_messages: 'Messages RP',
-    souillure: 'Souillure'
+    xp: 'XP',
+    rp_level: 'Niveau RP',
   }[type] || 'Classement';
 }
 
@@ -34,16 +36,22 @@ function getValue(profile, type) {
       return Array.isArray(profile.relations) ? profile.relations.length : 0;
     case 'rp_messages':
       return Number(profile.rpMessages) || 0;
-    case 'souillure':
-      return Number(profile.souillure) || 0;
+    case 'xp':
+      return Number(profile.xp) || 0;
+    case 'rp_level':
+      return Number(profile.rpLevel) || 0;
     default:
       return 0;
   }
 }
 
 function formatValue(type, value) {
-  if (type === 'souillure') {
-    return `${Number(value || 0).toFixed(2)}%`;
+  if (type === 'xp') {
+    return `${Number(value || 0).toLocaleString('fr-FR')} XP`;
+  }
+
+  if (type === 'rp_level') {
+    return `Niv. ${Number(value || 0).toLocaleString('fr-FR')}`;
   }
 
   return Number(value || 0).toLocaleString('fr-FR');
@@ -57,7 +65,7 @@ function buildRanking(profiles, type, mode) {
         userId: profile.userId,
         slot: profile.slot,
         displayName: profile.nomPrenom || `Profil ${profile.userId}`,
-        value: getValue(profile, type)
+        value: getValue(profile, type),
       }))
       .sort((a, b) => b.value - a.value);
   }
@@ -70,7 +78,7 @@ function buildRanking(profiles, type, mode) {
         id: profile.userId,
         userId: profile.userId,
         displayName: null,
-        value: 0
+        value: 0,
       });
     }
 
@@ -98,7 +106,7 @@ function paginateRanking(ranking, page = 1, perPage = 10) {
     perPage,
     totalPages,
     totalItems: ranking.length,
-    items: ranking.slice(start, start + perPage)
+    items: ranking.slice(start, start + perPage),
   };
 }
 
@@ -122,5 +130,5 @@ module.exports = {
   getPersonalRank,
   paginateRanking,
   getNextType,
-  getPreviousType
+  getPreviousType,
 };

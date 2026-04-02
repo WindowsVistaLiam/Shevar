@@ -3,7 +3,7 @@ const {
   EmbedBuilder,
   ActionRowBuilder,
   ButtonBuilder,
-  ButtonStyle
+  ButtonStyle,
 } = require('discord.js');
 
 const Profile = require('../../models/Profile');
@@ -15,7 +15,7 @@ const {
   getPersonalRank,
   paginateRanking,
   getNextType,
-  getPreviousType
+  getPreviousType,
 } = require('../../utils/classementUtils');
 const { createClassementAttachment } = require('../../utils/classementCanvas');
 const { getActiveSlot } = require('../../services/profileService');
@@ -47,7 +47,7 @@ function buildButtons(ownerUserId, page, totalPages, type, mode) {
         .setCustomId(`classement:type_next:${ownerUserId}:${page}:${type}:${mode}`)
         .setLabel('Type ➡️')
         .setStyle(ButtonStyle.Success)
-    )
+    ),
   ];
 }
 
@@ -69,27 +69,37 @@ async function buildUsersMap(client, entries) {
   return map;
 }
 
-async function buildClassementPayload({ client, guild, guildId, viewerId, viewerSlot, type, mode, page }) {
+async function buildClassementPayload({
+  client,
+  guild,
+  guildId,
+  viewerId,
+  viewerSlot,
+  type,
+  mode,
+  page,
+}) {
   const profiles = await Profile.find({ guildId }).lean();
   const ranking = buildRanking(profiles, type, mode);
-
   const paginated = paginateRanking(ranking, page, 10);
+
   const itemsWithRank = paginated.items.map((entry, index) => ({
     ...entry,
-    rank: (paginated.page - 1) * paginated.perPage + index + 1
+    rank: (paginated.page - 1) * paginated.perPage + index + 1,
   }));
 
   const usersMap = await buildUsersMap(client, itemsWithRank);
   const attachment = await createClassementAttachment({
     paginatedItems: itemsWithRank,
-    usersMap
+    usersMap,
   });
 
   const lines = itemsWithRank.map(entry => {
     const prefix = entry.rank <= 3 ? ['🥇', '🥈', '🥉'][entry.rank - 1] : `**${entry.rank}.**`;
-    const name = mode === 'joueur'
-      ? `<@${entry.userId}>`
-      : `${entry.displayName} *(slot ${entry.slot})*`;
+    const name =
+      mode === 'joueur'
+        ? `<@${entry.userId}>`
+        : `${entry.displayName} *(slot ${entry.slot})*`;
 
     return `${prefix} ${name} — **${formatValue(type, entry.value)}**`;
   });
@@ -105,22 +115,26 @@ async function buildClassementPayload({ client, guild, guildId, viewerId, viewer
         `**Mode :** ${getModeLabel(mode)}`,
         `**Page :** ${paginated.page}/${paginated.totalPages}`,
         personalRank > 0
-          ? `📍 **Ton classement :** #${personalRank} — **${formatValue(type, personalEntry.value)}**`
-          : '📍 **Ton classement :** non classé',
+          ? `**Ton classement :** #${personalRank} — **${formatValue(type, personalEntry.value)}**`
+          : '**Ton classement :** non classé',
         '',
-        lines.join('\n')
+        lines.length > 0 ? lines.join('\n') : '*Aucune entrée pour le moment.*',
       ].join('\n')
     )
     .setImage('attachment://classement-podium.png')
-    .setFooter({
-      text: `${guild.name} • ${paginated.totalItems} entrée(s)`
-    })
+    .setFooter({ text: `${guild.name} • ${paginated.totalItems} entrée(s)` })
     .setTimestamp();
 
   return {
     embeds: [embed],
     files: [attachment],
-    components: buildButtons(viewerId, paginated.page, paginated.totalPages, type, mode)
+    components: buildButtons(
+      viewerId,
+      paginated.page,
+      paginated.totalPages,
+      type,
+      mode
+    ),
   };
 }
 
@@ -139,7 +153,8 @@ module.exports = {
           { name: 'Réputation négative', value: 'reputation_negative' },
           { name: 'Relations', value: 'relations' },
           { name: 'Messages RP', value: 'rp_messages' },
-          { name: 'Souillure', value: 'souillure' }
+          { name: 'XP', value: 'xp' },
+          { name: 'Niveau RP', value: 'rp_level' }
         )
     )
     .addStringOption(option =>
@@ -154,7 +169,7 @@ module.exports = {
     ),
 
   async execute(interaction) {
-    const type = interaction.options.getString('type') || 'rp_messages';
+    const type = interaction.options.getString('type') || 'xp';
     const mode = interaction.options.getString('mode') || 'profil';
     const viewerSlot = await getActiveSlot(interaction.guildId, interaction.user.id);
 
@@ -166,11 +181,11 @@ module.exports = {
       viewerSlot,
       type,
       mode,
-      page: 1
+      page: 1,
     });
 
     await interaction.reply(payload);
   },
 
-  buildClassementPayload
+  buildClassementPayload,
 };

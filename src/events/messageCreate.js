@@ -1,17 +1,9 @@
 const { EmbedBuilder } = require('discord.js');
 const Profile = require('../models/Profile');
-const {
-  CHANNELS,
-  GAINS,
-  MIN_LENGTH,
-  MAX_SOUILLURE
-} = require('../config/souillure');
+const { CHANNELS, GAINS, MIN_LENGTH, MESSAGE_COOLDOWN_MS, computeLevelFromXp } = require('../config/xp');
+const { SOUILLURE_CHANNELS, SOUILLURE_GAINS, MAX_SOUILLURE } = require('../config/souillure');
 const { LEVEL_TITLES } = require('../config/titles');
 const { getActiveSlot } = require('../services/profileService');
-const {
-  getSouillureStageIndex,
-  buildSouillureStageEmbed
-} = require('../utils/souillureStages');
 const { getTitleRarityDisplay, getTitleRarityColor } = require('../utils/titleUtils');
 
 const cooldowns = new Map();
@@ -22,12 +14,6 @@ function normalizeIdArray(value) {
   return [String(value)];
 }
 
-/**
- * Retourne true si le message provient :
- * - soit directement d'un salon texte configuré
- * - soit d'un thread dont le parent est configuré
- * - soit d'un thread de forum dont le forum parent est configuré
- */
 function matchesConfiguredChannel(message, configuredIds) {
   const ids = normalizeIdArray(configuredIds);
   if (ids.length === 0) return false;
@@ -41,11 +27,27 @@ function matchesConfiguredChannel(message, configuredIds) {
   return false;
 }
 
-function getChannelType(message) {
+function getXpChannelType(message) {
   if (matchesConfiguredChannel(message, CHANNELS.SAINT)) return 'SAINT';
   if (matchesConfiguredChannel(message, CHANNELS.POLLUE)) return 'POLLUE';
   if (matchesConfiguredChannel(message, CHANNELS.SOUILLE)) return 'SOUILLE';
   return null;
+}
+
+function getCorruptionGain(message) {
+  if (matchesConfiguredChannel(message, SOUILLURE_CHANNELS.SAINT)) {
+    return SOUILLURE_GAINS.SAINT || 0;
+  }
+
+  if (matchesConfiguredChannel(message, SOUILLURE_CHANNELS.POLLUE)) {
+    return SOUILLURE_GAINS.POLLUE || 0;
+  }
+
+  if (matchesConfiguredChannel(message, SOUILLURE_CHANNELS.SOUILLE)) {
+    return SOUILLURE_GAINS.SOUILLE || 0;
+  }
+
+  return 0;
 }
 
 function getAutomaticTitleRarity(level) {
@@ -53,6 +55,21 @@ function getAutomaticTitleRarity(level) {
   if (level >= 15) return 'epic';
   if (level >= 5) return 'rare';
   return 'common';
+}
+
+function buildLevelUpEmbed({ profile, user, oldLevel, newLevel, gainedXp, totalXp }) {
+  return new EmbedBuilder()
+    .setColor(0x2ecc71)
+    .setTitle('✨ Niveau RP augmenté')
+    .setDescription(
+      `**${profile.nomPrenom || user.username}** gagne de l'expérience RP.\n\n` +
+      `**XP gagnée :** +${gainedXp}\n` +
+      `**XP totale :** ${totalXp}\n` +
+      `**Niveau RP :** ${oldLevel} → ${newLevel}`
+    )
+    .setThumbnail(profile.imageUrl || user.displayAvatarURL({ dynamic: true }))
+    .setFooter({ text: `Slot ${profile.slot} • ${user.username}` })
+    .setTimestamp();
 }
 
 function buildTitleEmbed({ profile, user, level, title, rarity }) {
@@ -65,9 +82,7 @@ function buildTitleEmbed({ profile, user, level, title, rarity }) {
       `**Titre obtenu :** ${getTitleRarityDisplay(title, rarity)}`
     )
     .setThumbnail(profile.imageUrl || user.displayAvatarURL({ dynamic: true }))
-    .setFooter({
-      text: `Slot ${profile.slot} • ${user.username}`
-    })
+    .setFooter({ text: `Slot ${profile.slot} • ${user.username}` })
     .setTimestamp();
 }
 
@@ -77,56 +92,50 @@ module.exports = {
   async execute(message) {
     try {
       if (!message.guild) return;
-      if (!message.author) return;
-      if (message.author.bot) return;
-      if (!message.content) return;
-
-      if (message.content.length < MIN_LENGTH) return;
-
-      const channelType = getChannelType(message);
-      if (!channelType) return;
+      if (!message.author || message.author.bot) return;
+      if (!message.content || message.content.length < MIN_LENGTH) return;
 
       const key = `${message.guild.id}-${message.author.id}`;
       const now = Date.now();
       const last = cooldowns.get(key) || 0;
 
-      if (now - last < 10000) return;
+      if (now - last < MESSAGE_COOLDOWN_MS) return;
       cooldowns.set(key, now);
 
-      const gain = GAINS[channelType];
-      const slot = await getActiveSlot(message.guild.id, message.author.id);
+      const xpChannelType = getXpChannelType(message);
+      const xpGain = xpChannelType ? (GAINS[xpChannelType] || 0) : 0;
+      const corruptionGain = getCorruptionGain(message);
 
+      if (xpGain <= 0 && corruptionGain <= 0) return;
+
+      const slot = await getActiveSlot(message.guild.id, message.author.id);
       const profile = await Profile.findOne({
         guildId: message.guild.id,
         userId: message.author.id,
-        slot
+        slot,
       });
 
       if (!profile) return;
 
-      // ----- Souillure -----
-      const oldSouillure = Number(profile.souillure) || 0;
-      const oldSouillureStageIndex = getSouillureStageIndex(oldSouillure);
-
-      let newSouillure = oldSouillure + gain;
-      newSouillure = Math.min(newSouillure, MAX_SOUILLURE);
-      newSouillure = Number(newSouillure.toFixed(2));
-
-      profile.souillure = newSouillure;
-
-      const newSouillureStageIndex = getSouillureStageIndex(newSouillure);
-
-      // ----- Progression RP / titres -----
       const oldLevel = Number(profile.rpLevel) || 1;
+      const oldXp = Number(profile.xp) || 0;
+      const oldCorruption = Number(profile.souillure) || 0;
 
       profile.rpMessages = (Number(profile.rpMessages) || 0) + 1;
 
-      const computedLevel = Math.min(50, Math.floor(profile.rpMessages / 20) + 1);
-      profile.rpLevel = computedLevel;
+      if (xpGain > 0) {
+        profile.xp = oldXp + xpGain;
+        profile.rpLevel = computeLevelFromXp(profile.xp);
+      }
 
+      if (corruptionGain > 0) {
+        profile.souillure = Math.min(MAX_SOUILLURE || 100, oldCorruption + corruptionGain);
+      }
+
+      const newLevel = Number(profile.rpLevel) || 1;
       const newTitles = [];
 
-      for (let level = oldLevel + 1; level <= computedLevel; level += 1) {
+      for (let level = oldLevel + 1; level <= newLevel; level += 1) {
         const title = LEVEL_TITLES[level];
 
         if (
@@ -137,53 +146,45 @@ module.exports = {
           })
         ) {
           const rarity = getAutomaticTitleRarity(level);
-
-          profile.titles.push({
-            name: title,
-            rarity
-          });
-
-          newTitles.push({
-            level,
-            title,
-            rarity
-          });
+          profile.titles.push({ name: title, rarity });
+          newTitles.push({ level, title, rarity });
         }
       }
 
       await profile.save();
 
-      // ----- Embed de palier de souillure -----
-      if (newSouillureStageIndex > oldSouillureStageIndex) {
-        const souillureEmbed = buildSouillureStageEmbed({
+      if (newLevel > oldLevel && xpGain > 0) {
+        const levelEmbed = buildLevelUpEmbed({
           profile,
           user: message.author,
-          souillure: newSouillure
+          oldLevel,
+          newLevel,
+          gainedXp: xpGain,
+          totalXp: profile.xp,
         });
 
         await message.channel.send({
           content: `<@${message.author.id}>`,
-          embeds: [souillureEmbed]
+          embeds: [levelEmbed],
         });
       }
 
-      // ----- Embed(s) de titre(s) -----
       for (const entry of newTitles) {
         const titleEmbed = buildTitleEmbed({
           profile,
           user: message.author,
           level: entry.level,
           title: entry.title,
-          rarity: entry.rarity
+          rarity: entry.rarity,
         });
 
         await message.channel.send({
           content: `<@${message.author.id}>`,
-          embeds: [titleEmbed]
+          embeds: [titleEmbed],
         });
       }
     } catch (error) {
       console.error('❌ Erreur messageCreate :', error);
     }
-  }
+  },
 };

@@ -1,6 +1,8 @@
 const { EmbedBuilder } = require('discord.js');
 const { getTitleRarityDisplay } = require('./titleUtils');
 const { buildEquipmentSummary } = require('./inventoryCanvas');
+const { getCurrentLevelProgress } = require('../config/xp');
+const { getSouillureStage } = require('./souillureStages');
 
 function truncate(text, maxLength) {
   if (!text) return 'Non renseigné';
@@ -8,41 +10,15 @@ function truncate(text, maxLength) {
   return `${text.slice(0, maxLength - 3)}...`;
 }
 
-function buildSouillureBar(percent = 0) {
-  const safe = Math.max(0, Math.min(100, Number(percent) || 0));
+function buildXpBar(current = 0, required = 100) {
+  const safeCurrent = Math.max(0, Number(current) || 0);
+  const safeRequired = Math.max(1, Number(required) || 1);
+  const ratio = Math.max(0, Math.min(1, safeCurrent / safeRequired));
   const totalBars = 10;
-  const filledBars = Math.round(safe / 10);
+  const filledBars = Math.round(ratio * totalBars);
   const emptyBars = totalBars - filledBars;
-  return `${'█'.repeat(filledBars)}${'░'.repeat(emptyBars)} ${safe}%`;
-}
 
-function getSouillureState(percent = 0) {
-  const value = Number(percent) || 0;
-  if (value <= 0) return 'Pureté apparente';
-  if (value <= 10) return 'Frémissement léger';
-  if (value <= 20) return 'Frémissement intense';
-  if (value <= 30) return 'Tic inopiné';
-  if (value <= 40) return 'Présence diffuse';
-  if (value <= 50) return 'Modification corporelle et psychique';
-  if (value <= 60) return 'Corruption rampante sur le corps';
-  if (value <= 70) return 'Corruption gangrénée';
-  if (value <= 80) return 'Altération profonde';
-  if (value <= 90) return 'Altération chaotique';
-  return 'Souillure critique';
-}
-
-function getPresenceText(souillure = 0) {
-  if (souillure <= 0) return 'Aucune anomalie perceptible.';
-  if (souillure <= 10) return 'Aucune anomalie perceptible.';
-  if (souillure <= 20) return 'Altération comportementale.';
-  if (souillure <= 30) return 'Altération comportementale brutale.';
-  if (souillure <= 40) return 'Altération comportementale brutale et trace de striure sur le corps.';
-  if (souillure <= 50) return 'Altération comportementale brutale et une partie du corps altérée.';
-  if (souillure <= 60) return 'Altération comportementale brutale et plusieurs parties du corps altérées.';
-  if (souillure <= 70) return 'Perte de lucidité et de la maîtrise de ses actes, altérations profondes sur le corps.';
-  if (souillure <= 80) return 'Perte totale de lucidité et séquelles sur le corps.';
-  if (souillure <= 90) return 'Phase de non retour amorcée.';
-  return "La réalité elle-même semble se déformer, ce personnage n'est plus que l'ombre de lui-même.";
+  return `${'█'.repeat(filledBars)}${'░'.repeat(emptyBars)} ${safeCurrent}/${safeRequired}`;
 }
 
 function formatInventory(inventory = []) {
@@ -86,7 +62,7 @@ function formatRelationType(type = 'autre') {
     amour: 'Amour',
     haine: 'Haine',
     neutre: 'Neutre',
-    autre: 'Autre'
+    autre: 'Autre',
   };
 
   return labels[type] || 'Autre';
@@ -124,9 +100,9 @@ function buildReputationSummary(profile) {
   const balanceText = balance > 0 ? `+${balance}` : `${balance}`;
 
   return [
-    `🌟 **Réputation positive :** ${positive}`,
-    `🕸️ **Réputation négative :** ${negative}`,
-    `⚖️ **Balance :** ${balanceText}`
+    `✅ **Réputation positive :** ${positive}`,
+    `⚠️ **Réputation négative :** ${negative}`,
+    `⚖️ **Balance :** ${balanceText}`,
   ].join('\n');
 }
 
@@ -137,28 +113,25 @@ function formatDate(date) {
   return parsed.toLocaleString('fr-FR');
 }
 
-function getPageColor(page, souillure = 0) {
+function getPageColor(page) {
   if (page === 1) return 0x3498db;
-  if (page === 2) return 0x9b59b6;
-  if (page === 3) return 0x2ecc71;
-
-  if (souillure <= 20) return 0x95a5a6;
-  if (souillure <= 40) return 0x8e44ad;
-  if (souillure <= 60) return 0x7d3c98;
-  if (souillure <= 80) return 0xc0392b;
-  return 0x7f0000;
+  if (page === 2) return 0x2ecc71;
+  return 0x9b59b6;
 }
 
 function buildProfileEmbed(profile, targetUser, guild, page = 1) {
-  const souillure = Number(profile.souillure) || 0;
-  const wallet = Number(profile.wallet) || 0;
+  const xp = Number(profile.xp) || 0;
+  const corruption = Number(profile.souillure) || 0;
   const rpMessages = Number(profile.rpMessages) || 0;
   const rpLevel = Number(profile.rpLevel) || 1;
-  const color = getPageColor(page, souillure);
+  const progress = getCurrentLevelProgress(xp);
+  const corruptionStage = getSouillureStage(corruption);
+
+  const color = getPageColor(page);
   const slot = profile.slot || 1;
 
   const baseFooter = {
-    text: `${guild?.name || 'Serveur RP'} • Profil de ${targetUser.username} • Slot ${slot} • Page ${page}/3`
+    text: `${guild?.name || 'Serveur RP'} • Profil de ${targetUser.username} • Slot ${slot} • Page ${page}/3`,
   };
 
   if (page === 1) {
@@ -166,16 +139,21 @@ function buildProfileEmbed(profile, targetUser, guild, page = 1) {
       .setColor(color)
       .setAuthor({
         name: `📘 Dossier de ${targetUser.username}`,
-        iconURL: targetUser.displayAvatarURL({ size: 256 })
+        iconURL: targetUser.displayAvatarURL({ size: 256 }),
       })
       .setTitle(`✨ ${profile.nomPrenom || 'Personnage sans nom'} • Slot ${slot}`)
       .addFields(
         { name: '🪪 Identité', value: profile.nomPrenom || 'Non renseigné', inline: false },
         { name: '👤 Âge / Genre', value: profile.ageGenre || 'Non renseigné', inline: false },
-        { name: '🔮 Pouvoir / Aptitude', value: truncate(profile.pouvoir || 'Non renseigné', 1024), inline: false },
+        { name: '🔥 Pouvoir / Aptitude', value: truncate(profile.pouvoir || 'Non renseigné', 1024), inline: false },
         { name: '📝 Description', value: truncate(profile.description || 'Aucune description.', 1024), inline: false },
         { name: '⭐ Réputation', value: buildReputationSummary(profile), inline: false },
-        { name: '💞 Relations', value: buildRelationsSummary(profile.relations || []), inline: false }
+        {
+          name: '🕯️ Corruption',
+          value: `**Valeur :** ${corruption}/100\n**État :** ${corruptionStage.label}`,
+          inline: false,
+        },
+        { name: '🤝 Relations', value: buildRelationsSummary(profile.relations || []), inline: false }
       )
       .setFooter(baseFooter)
       .setTimestamp();
@@ -189,34 +167,41 @@ function buildProfileEmbed(profile, targetUser, guild, page = 1) {
   }
 
   if (page === 2) {
+    const progressText =
+      progress.level >= 50
+        ? 'Niveau maximum atteint.'
+        : [
+            `**Barre XP :** ${buildXpBar(progress.xpIntoLevel, progress.xpNeededForNextLevel)}`,
+            `**XP restante avant le prochain niveau :** ${progress.remainingXp}`,
+          ].join('\n');
+
     return new EmbedBuilder()
       .setColor(color)
       .setAuthor({
-        name: `📚 Détails complémentaires de ${targetUser.username}`,
-        iconURL: targetUser.displayAvatarURL({ size: 256 })
+        name: `📈 Progression de ${targetUser.username}`,
+        iconURL: targetUser.displayAvatarURL({ size: 256 }),
       })
-      .setTitle(`🧾 Fiche annexe — ${profile.nomPrenom || targetUser.username} • Slot ${slot}`)
+      .setTitle(`📜 Fiche annexe — ${profile.nomPrenom || targetUser.username} • Slot ${slot}`)
       .addFields(
         { name: '💼 Métier', value: profile.metier || 'Sans métier', inline: false },
         { name: '🏅 Titre équipé', value: getEquippedTitleDisplay(profile), inline: false },
-        { name: '☣️ Souillure', value: `${buildSouillureBar(souillure)}\n${getSouillureState(souillure)}`, inline: false },
-        { name: '👁️ Présence', value: getPresenceText(souillure), inline: false },
         {
-          name: '📈 Progression RP',
+          name: '📊 Progression RP',
           value: [
             `**Niveau RP :** ${rpLevel}`,
+            `**XP totale :** ${xp}`,
             `**Messages RP validés :** ${rpMessages}`,
-            `**Avant le prochain niveau :** ${Math.max(0, 20 - (rpMessages % 20))} message(s)`
+            progressText,
           ].join('\n'),
-          inline: false
+          inline: false,
         },
         {
-          name: '📂 Archive',
+          name: '🗂️ Archive',
           value: [
             `**Créé le :** ${formatDate(profile.createdAt)}`,
-            `**Dernière mise à jour :** ${formatDate(profile.updatedAt)}`
+            `**Dernière mise à jour :** ${formatDate(profile.updatedAt)}`,
           ].join('\n'),
-          inline: false
+          inline: false,
         }
       )
       .setFooter(baseFooter)
@@ -227,20 +212,17 @@ function buildProfileEmbed(profile, targetUser, guild, page = 1) {
     .setColor(color)
     .setAuthor({
       name: `🎒 Inventaire de ${targetUser.username}`,
-      iconURL: targetUser.displayAvatarURL({ size: 256 })
+      iconURL: targetUser.displayAvatarURL({ size: 256 }),
     })
-    .setTitle(`💰 Inventaire & Équipement — ${profile.nomPrenom || targetUser.username} • Slot ${slot}`)
+    .setTitle(`🧰 Inventaire & Équipement — ${profile.nomPrenom || targetUser.username} • Slot ${slot}`)
     .setDescription('L’image ci-dessous représente la silhouette et les emplacements équipés du profil.')
     .addFields(
-      { name: '🪙 Portefeuille', value: `**${wallet}** pièces`, inline: false },
-      { name: '🧩 Équipement', value: buildEquipmentSummary(profile), inline: false },
-      { name: '🎁 Inventaire', value: truncate(formatInventory(profile.inventory), 1024), inline: false }
+      { name: '🛡️ Équipement', value: buildEquipmentSummary(profile), inline: false },
+      { name: '📦 Inventaire', value: truncate(formatInventory(profile.inventory), 1024), inline: false }
     )
     .setImage('attachment://inventaire-silhouette.png')
     .setFooter(baseFooter)
     .setTimestamp();
 }
 
-module.exports = {
-  buildProfileEmbed
-};
+module.exports = { buildProfileEmbed };
