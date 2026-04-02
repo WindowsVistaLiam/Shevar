@@ -1,11 +1,5 @@
-const {
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
-  StringSelectMenuBuilder
-} = require('discord.js');
-
-const { formatRelationType } = require('./relationEmbeds');
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
+const { formatRelationType, getRelationTargetName } = require('./relationEmbeds');
 
 function shorten(text, max = 100) {
   if (!text) return 'Non renseigné';
@@ -23,11 +17,13 @@ function buildRelationRows(ownerUserId, slot, page, totalPages, currentPageRelat
         .setEmoji('⬅️')
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(page <= 1),
+
       new ButtonBuilder()
         .setCustomId(`relation_next:${ownerUserId}:${slot}:${page}`)
         .setEmoji('➡️')
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(page >= totalPages),
+
       new ButtonBuilder()
         .setCustomId(`relation_add:${ownerUserId}:${slot}:${page}`)
         .setLabel('Ajouter')
@@ -44,14 +40,12 @@ function buildRelationRows(ownerUserId, slot, page, totalPages, currentPageRelat
           .setPlaceholder('Voir le détail d’une relation')
           .addOptions(
             currentPageRelations.map(relation => {
-              const targetName =
-                relation.targetProfileNameSnapshot ||
-                `Utilisateur ${relation.targetUserId} • Slot ${relation.targetSlot || 1}`;
+              const targetName = getRelationTargetName(relation);
 
               return {
                 label: shorten(`${formatRelationType(relation.type)} — ${targetName}`, 100),
                 description: shorten(relation.description || 'Aucune description', 100),
-                value: String(relation._id)
+                value: String(relation._id),
               };
             })
           )
@@ -65,14 +59,12 @@ function buildRelationRows(ownerUserId, slot, page, totalPages, currentPageRelat
           .setPlaceholder('Supprimer une relation')
           .addOptions(
             currentPageRelations.map(relation => {
-              const targetName =
-                relation.targetProfileNameSnapshot ||
-                `Utilisateur ${relation.targetUserId} • Slot ${relation.targetSlot || 1}`;
+              const targetName = getRelationTargetName(relation);
 
               return {
                 label: shorten(`${formatRelationType(relation.type)} — ${targetName}`, 100),
                 description: 'Supprimer cette relation',
-                value: String(relation._id)
+                value: String(relation._id),
               };
             })
           )
@@ -83,6 +75,4 @@ function buildRelationRows(ownerUserId, slot, page, totalPages, currentPageRelat
   return rows;
 }
 
-module.exports = {
-  buildRelationRows
-};
+module.exports = { buildRelationRows };

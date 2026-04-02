@@ -16,26 +16,16 @@ const inventoryItemSchema = new mongoose.Schema(
 
 const relationSchema = new mongoose.Schema(
   {
-    targetUserId: { type: String, required: true },
-    targetSlot: { type: Number, default: 1 },
-    targetProfileNameSnapshot: { type: String, default: '' },
-    type: {
-      type: String,
-      enum: [
-        'allie',
-        'rival',
-        'famille',
-        'mentor',
-        'disciple',
-        'amour',
-        'haine',
-        'neutre',
-        'autre'
-      ],
-      default: 'autre'
-    },
+    targetNameSnapshot: { type: String, required: true, default: '' },
+
+    type: { type: String, default: '' },
     description: { type: String, default: '' },
-    createdAt: { type: Date, default: Date.now }
+
+    // Champs legacy gardés pour compatibilité avec d’anciennes relations
+    targetUserId: { type: String, default: '' },
+    targetSlot: { type: Number, default: null },
+
+    createdAt: { type: Date, default: Date.now },
   },
   { _id: true }
 );
