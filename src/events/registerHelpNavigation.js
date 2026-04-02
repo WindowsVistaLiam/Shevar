@@ -4,6 +4,7 @@ const { buildHelpNavigationRow } = require('../utils/helpComponents');
 module.exports = function registerHelpNavigation(client) {
   client.on('interactionCreate', async interaction => {
     if (!interaction.isButton()) return;
+
     if (
       !interaction.customId.startsWith('help_prev:') &&
       !interaction.customId.startsWith('help_next:')
@@ -20,12 +21,12 @@ module.exports = function registerHelpNavigation(client) {
       }
 
       if (action === 'help_next') {
-        page = Math.min(4, page + 1);
+        page = Math.min(3, page + 1);
       }
 
       await interaction.update({
         embeds: [buildHelpEmbed(page, interaction.guild?.name || 'Serveur RP')],
-        components: [buildHelpNavigationRow(page)]
+        components: [buildHelpNavigationRow(page)],
       });
     } catch (error) {
       console.error('❌ Erreur navigation help :', error);
@@ -33,12 +34,12 @@ module.exports = function registerHelpNavigation(client) {
       if (interaction.replied || interaction.deferred) {
         await interaction.followUp({
           content: 'Une erreur est survenue pendant la navigation de l’aide.',
-          flags: 64
+          flags: 64,
         }).catch(() => {});
       } else {
         await interaction.reply({
           content: 'Une erreur est survenue pendant la navigation de l’aide.',
-          flags: 64
+          flags: 64,
         }).catch(() => {});
       }
     }

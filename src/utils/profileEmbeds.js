@@ -146,7 +146,6 @@ function buildProfileEmbed(profile, targetUser, guild, page = 1) {
         { name: '🔮 Pouvoir / Aptitude', value: truncate(profile.pouvoir || 'Non renseigné', 1024), inline: false },
         { name: '📝 Description', value: truncate(profile.description || 'Aucune description.', 1024), inline: false },
         { name: '⭐ Réputation', value: buildReputationSummary(profile), inline: false },
-        { name: '💞 Relations', value: buildRelationsSummary(profile.relations || []), inline: false }
       )
       .setFooter(baseFooter)
       .setTimestamp();
@@ -173,14 +172,7 @@ function buildProfileEmbed(profile, targetUser, guild, page = 1) {
       { name: '🏅 Titre équipé', value: getEquippedTitleDisplay(profile), inline: false },
       { name: '☣️ Corruption', value: `${buildCorruptionBar(souillure)}\n${getCorruptionState(souillure)}`, inline: false },
       { name: '👁️ Présence', value: getPresenceText(souillure), inline: false },
-      {
-        name: '📂 Archive',
-        value: [
-          `**Créé le :** ${formatDate(profile.createdAt)}`,
-          `**Dernière mise à jour :** ${formatDate(profile.updatedAt)}`,
-        ].join('\n'),
-        inline: false,
-      }
+      { name: '💞 Relations', value: buildRelationsSummary(profile.relations || []), inline: false }
     )
     .setFooter(baseFooter)
     .setTimestamp();

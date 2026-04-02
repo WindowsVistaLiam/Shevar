@@ -10,7 +10,7 @@ function buildHelpNavigationRow(page = 1) {
 
     new ButtonBuilder()
       .setCustomId(`help_home:${page}`)
-      .setLabel(`Page ${page}/4`)
+      .setLabel(`Page ${page}/3`)
       .setStyle(ButtonStyle.Primary)
       .setDisabled(true),
 
@@ -18,10 +18,8 @@ function buildHelpNavigationRow(page = 1) {
       .setCustomId(`help_next:${page}`)
       .setEmoji('➡️')
       .setStyle(ButtonStyle.Secondary)
-      .setDisabled(page >= 4)
+      .setDisabled(page >= 3)
   );
 }
 
-module.exports = {
-  buildHelpNavigationRow
-};
+module.exports = { buildHelpNavigationRow };
