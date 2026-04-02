@@ -11,19 +11,11 @@ module.exports = {
     try {
       const page = 1;
 
-      const embed = buildHelpEmbed(
-        page,
-        interaction.guild?.name || 'Serveur RP'
-      );
-
-      const components = [buildHelpNavigationRow(page)];
-
       await interaction.reply({
-        embeds: [embed],
-        components,
-        ephemeral: true, // visible uniquement par l'utilisateur
+        embeds: [buildHelpEmbed(page, interaction.guild?.name || 'Serveur RP')],
+        components: [buildHelpNavigationRow(page)],
+        ephemeral: true,
       });
-
     } catch (error) {
       console.error('❌ Erreur commande /help :', error);
 

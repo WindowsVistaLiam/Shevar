@@ -16,13 +16,8 @@ module.exports = function registerHelpNavigation(client) {
       const [action, rawPage] = interaction.customId.split(':');
       let page = Number(rawPage) || 1;
 
-      if (action === 'help_prev') {
-        page = Math.max(1, page - 1);
-      }
-
-      if (action === 'help_next') {
-        page = Math.min(3, page + 1);
-      }
+      if (action === 'help_prev') page = Math.max(1, page - 1);
+      if (action === 'help_next') page = Math.min(3, page + 1);
 
       await interaction.update({
         embeds: [buildHelpEmbed(page, interaction.guild?.name || 'Serveur RP')],
@@ -34,12 +29,12 @@ module.exports = function registerHelpNavigation(client) {
       if (interaction.replied || interaction.deferred) {
         await interaction.followUp({
           content: 'Une erreur est survenue pendant la navigation de l’aide.',
-          flags: 64,
+          ephemeral: true,
         }).catch(() => {});
       } else {
         await interaction.reply({
           content: 'Une erreur est survenue pendant la navigation de l’aide.',
-          flags: 64,
+          ephemeral: true,
         }).catch(() => {});
       }
     }
