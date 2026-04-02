@@ -3,7 +3,7 @@ const {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
-  MessageFlags
+  MessageFlags,
 } = require('discord.js');
 
 const Profile = require('../../models/Profile');
@@ -18,12 +18,13 @@ function buildProfileNavigationRows(targetUserId, slot, currentPage) {
         .setEmoji('⬅️')
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(currentPage <= 1),
+
       new ButtonBuilder()
         .setCustomId(`profile_next:${targetUserId}:${slot}:${currentPage}`)
         .setEmoji('➡️')
         .setStyle(ButtonStyle.Secondary)
-        .setDisabled(currentPage >= 3)
-    )
+        .setDisabled(currentPage >= 2)
+    ),
   ];
 }
 
@@ -35,7 +36,12 @@ module.exports = {
       option.setName('joueur').setDescription('Joueur ciblé').setRequired(false)
     )
     .addIntegerOption(option =>
-      option.setName('slot').setDescription('Slot ciblé').setRequired(false).setMinValue(1).setMaxValue(10)
+      option
+        .setName('slot')
+        .setDescription('Slot ciblé')
+        .setRequired(false)
+        .setMinValue(1)
+        .setMaxValue(10)
     ),
 
   async execute(interaction) {
@@ -46,23 +52,22 @@ module.exports = {
     const profile = await Profile.findOne({
       guildId: interaction.guildId,
       userId: targetUser.id,
-      slot
+      slot,
     }).lean();
 
     if (!profile) {
       await interaction.reply({
         content: `Aucun profil trouvé pour **${targetUser.username}** dans le **slot ${slot}**.`,
-        flags: MessageFlags.Ephemeral
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
 
-    const page = 1;
-    const payload = await buildProfilePagePayload(profile, targetUser, interaction.guild, page);
+    const payload = await buildProfilePagePayload(profile, targetUser, interaction.guild, 1);
 
     await interaction.reply({
       ...payload,
-      components: buildProfileNavigationRows(targetUser.id, slot, page)
+      components: buildProfileNavigationRows(targetUser.id, slot, 1),
     });
-  }
+  },
 };

@@ -10,12 +10,13 @@ function buildProfileNavigationRows(targetUserId, slot, currentPage) {
         .setEmoji('⬅️')
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(currentPage <= 1),
+
       new ButtonBuilder()
         .setCustomId(`profile_next:${targetUserId}:${slot}:${currentPage}`)
         .setEmoji('➡️')
         .setStyle(ButtonStyle.Secondary)
-        .setDisabled(currentPage >= 3)
-    )
+        .setDisabled(currentPage >= 2)
+    ),
   ];
 }
 
@@ -23,6 +24,7 @@ module.exports = function registerProfileNavigation(client) {
   client.on('interactionCreate', async interaction => {
     try {
       if (!interaction.isButton()) return;
+
       if (
         !interaction.customId.startsWith('profile_prev:') &&
         !interaction.customId.startsWith('profile_next:')
@@ -40,27 +42,28 @@ module.exports = function registerProfileNavigation(client) {
         page += 1;
       }
 
-      page = Math.max(1, Math.min(3, page));
+      page = Math.max(1, Math.min(2, page));
 
       const profile = await Profile.findOne({
         guildId: interaction.guildId,
         userId: targetUserId,
-        slot
+        slot,
       }).lean();
 
       if (!profile) {
         await interaction.reply({
           content: 'Ce profil est introuvable.',
-          flags: MessageFlags.Ephemeral
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }
 
       const targetUser = await client.users.fetch(targetUserId).catch(() => null);
+
       if (!targetUser) {
         await interaction.reply({
           content: 'Impossible de retrouver cet utilisateur.',
-          flags: MessageFlags.Ephemeral
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }
@@ -69,7 +72,7 @@ module.exports = function registerProfileNavigation(client) {
 
       await interaction.update({
         ...payload,
-        components: buildProfileNavigationRows(targetUserId, slot, page)
+        components: buildProfileNavigationRows(targetUserId, slot, page),
       });
     } catch (error) {
       console.error('❌ Erreur navigation profil :', error);
@@ -77,12 +80,12 @@ module.exports = function registerProfileNavigation(client) {
       if (interaction.replied || interaction.deferred) {
         await interaction.followUp({
           content: 'Une erreur est survenue pendant la navigation du profil.',
-          flags: MessageFlags.Ephemeral
+          flags: MessageFlags.Ephemeral,
         }).catch(() => {});
       } else {
         await interaction.reply({
           content: 'Une erreur est survenue pendant la navigation du profil.',
-          flags: MessageFlags.Ephemeral
+          flags: MessageFlags.Ephemeral,
         }).catch(() => {});
       }
     }
