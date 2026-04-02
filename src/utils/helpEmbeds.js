@@ -102,7 +102,6 @@ function buildHelpEmbed(page = 1, guildName = 'Serveur RP') {
           '`/roll` — lancer des dés',
           '`/classement` — afficher les classements',
           '`/map` — consulter la carte',
-          '`/lettre` — utiliser le système de lettres',
           '`/help` — afficher cette aide',
         ]),
         inline: false,

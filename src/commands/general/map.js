@@ -5,6 +5,8 @@ const {
   ActionRowBuilder,
   StringSelectMenuBuilder,
 } = require('discord.js');
+const path = require('path');
+const fs = require('fs');
 
 const Profile = require('../../models/Profile');
 const { LOCATIONS } = require('../../config/mapLocations');
@@ -27,6 +29,52 @@ function buildMapSelectMenu(ownerUserId, selectedLocation = '') {
         }))
       )
   );
+}
+
+function getLocationImageFilename(location) {
+  switch (location) {
+    case "Shevar' District 0":
+      return 'district0.png';
+    case "Shevar' District 1":
+      return 'district1.png';
+    case "Shevar' District 2":
+      return 'district2.png';
+    case "Shevar' District 3":
+      return 'district3.png';
+    case "Shevar' District 4":
+      return 'district4.png';
+    case "Shevar' District 5":
+      return 'district5.png';
+    case "Shevar' District 6":
+      return 'district6.png';
+    case "Shevar' District 7":
+      return 'district7.png';
+    case "Shevar' District 8":
+      return 'district8.png';
+    case "Extérieur de Shevar'":
+      return 'extérieur.png';
+    case 'Endroit Inconnu':
+      return 'autre.jpeg';
+    default:
+      return 'map.png';
+  }
+}
+
+function getLocationImagePath(location) {
+  const filename = getLocationImageFilename(location);
+  const fullPath = path.join(process.cwd(), 'src', 'assets', filename);
+
+  if (fs.existsSync(fullPath)) {
+    return { path: fullPath, name: filename };
+  }
+
+  const fallbackUnknown = path.join(process.cwd(), 'src', 'assets', 'autre.jpeg');
+  if (fs.existsSync(fallbackUnknown)) {
+    return { path: fallbackUnknown, name: 'autre.jpeg' };
+  }
+
+  const fallbackMap = path.join(process.cwd(), 'src', 'assets', 'map.png');
+  return { path: fallbackMap, name: 'map.png' };
 }
 
 module.exports = {
@@ -52,11 +100,17 @@ module.exports = {
         return;
       }
 
-      const file = new AttachmentBuilder('src/assets/map.png', {
-        name: 'map.png',
-      });
-
       const currentLocation = profile.location || 'Endroit Inconnu';
+
+      const mapFile = new AttachmentBuilder(
+        path.join(process.cwd(), 'src', 'assets', 'map.png'),
+        { name: 'map.png' }
+      );
+
+      const locationImage = getLocationImagePath(currentLocation);
+      const locationFile = new AttachmentBuilder(locationImage.path, {
+        name: locationImage.name,
+      });
 
       const embed = new EmbedBuilder()
         .setColor(0x2b2d31)
@@ -68,7 +122,15 @@ module.exports = {
             'Utilise le menu déroulant ci-dessous pour choisir où se trouve ton personnage.',
           ].join('\n')
         )
-        .setImage('attachment://map.png')
+        .addFields(
+          {
+            name: '📍 Aperçu de la zone',
+            value: currentLocation,
+            inline: false,
+          }
+        )
+        .setImage(`attachment://${locationImage.name}`)
+        .setThumbnail('attachment://map.png')
         .setFooter({
           text: `${interaction.guild?.name || 'Serveur RP'} • Slot ${slot}`,
         })
@@ -76,7 +138,7 @@ module.exports = {
 
       await interaction.reply({
         embeds: [embed],
-        files: [file],
+        files: [mapFile, locationFile],
         components: [buildMapSelectMenu(interaction.user.id, currentLocation)],
         ephemeral: true,
       });
