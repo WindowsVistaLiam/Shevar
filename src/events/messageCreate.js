@@ -1,12 +1,13 @@
 const { EmbedBuilder } = require('discord.js');
 const Profile = require('../models/Profile');
-const { CHANNELS, GAINS, MIN_LENGTH, MESSAGE_COOLDOWN_MS, computeLevelFromXp } = require('../config/xp');
-const { SOUILLURE_CHANNELS, SOUILLURE_GAINS, MAX_SOUILLURE } = require('../config/souillure');
+const { CHANNELS, GAINS, MIN_LENGTH, MAX_SOUILLURE } = require('../config/souillure');
 const { LEVEL_TITLES } = require('../config/titles');
 const { getActiveSlot } = require('../services/profileService');
+const {
+  getSouillureStageIndex,
+  buildSouillureStageEmbed
+} = require('../utils/souillureStages');
 const { getTitleRarityDisplay, getTitleRarityColor } = require('../utils/titleUtils');
-
-const cooldowns = new Map();
 
 function normalizeIdArray(value) {
   if (!value) return [];
@@ -27,27 +28,11 @@ function matchesConfiguredChannel(message, configuredIds) {
   return false;
 }
 
-function getXpChannelType(message) {
+function getChannelType(message) {
   if (matchesConfiguredChannel(message, CHANNELS.SAINT)) return 'SAINT';
   if (matchesConfiguredChannel(message, CHANNELS.POLLUE)) return 'POLLUE';
   if (matchesConfiguredChannel(message, CHANNELS.SOUILLE)) return 'SOUILLE';
   return null;
-}
-
-function getCorruptionGain(message) {
-  if (matchesConfiguredChannel(message, SOUILLURE_CHANNELS.SAINT)) {
-    return SOUILLURE_GAINS.SAINT || 0;
-  }
-
-  if (matchesConfiguredChannel(message, SOUILLURE_CHANNELS.POLLUE)) {
-    return SOUILLURE_GAINS.POLLUE || 0;
-  }
-
-  if (matchesConfiguredChannel(message, SOUILLURE_CHANNELS.SOUILLE)) {
-    return SOUILLURE_GAINS.SOUILLE || 0;
-  }
-
-  return 0;
 }
 
 function getAutomaticTitleRarity(level) {
@@ -57,15 +42,14 @@ function getAutomaticTitleRarity(level) {
   return 'common';
 }
 
-function buildLevelUpEmbed({ profile, user, oldLevel, newLevel, gainedXp, totalXp }) {
+function buildLevelUpEmbed({ profile, user, oldLevel, newLevel }) {
   return new EmbedBuilder()
     .setColor(0x2ecc71)
     .setTitle('✨ Niveau RP augmenté')
     .setDescription(
-      `**${profile.nomPrenom || user.username}** gagne de l'expérience RP.\n\n` +
-      `**XP gagnée :** +${gainedXp}\n` +
-      `**XP totale :** ${totalXp}\n` +
-      `**Niveau RP :** ${oldLevel} → ${newLevel}`
+      `**${profile.nomPrenom || user.username}** progresse.\n\n` +
+      `**Niveau RP :** ${oldLevel} → ${newLevel}\n` +
+      `**Messages RP validés :** ${profile.rpMessages}`
     )
     .setThumbnail(profile.imageUrl || user.displayAvatarURL({ dynamic: true }))
     .setFooter({ text: `Slot ${profile.slot} • ${user.username}` })
@@ -95,44 +79,34 @@ module.exports = {
       if (!message.author || message.author.bot) return;
       if (!message.content || message.content.length < MIN_LENGTH) return;
 
-      const key = `${message.guild.id}-${message.author.id}`;
-      const now = Date.now();
-      const last = cooldowns.get(key) || 0;
+      const channelType = getChannelType(message);
+      if (!channelType) return;
 
-      if (now - last < MESSAGE_COOLDOWN_MS) return;
-      cooldowns.set(key, now);
-
-      const xpChannelType = getXpChannelType(message);
-      const xpGain = xpChannelType ? (GAINS[xpChannelType] || 0) : 0;
-      const corruptionGain = getCorruptionGain(message);
-
-      if (xpGain <= 0 && corruptionGain <= 0) return;
+      const gain = GAINS[channelType] || 0;
+      if (gain <= 0) return;
 
       const slot = await getActiveSlot(message.guild.id, message.author.id);
       const profile = await Profile.findOne({
         guildId: message.guild.id,
         userId: message.author.id,
-        slot,
+        slot
       });
 
       if (!profile) return;
 
       const oldLevel = Number(profile.rpLevel) || 1;
-      const oldXp = Number(profile.xp) || 0;
       const oldCorruption = Number(profile.souillure) || 0;
+      const oldStageIndex = getSouillureStageIndex(oldCorruption);
 
       profile.rpMessages = (Number(profile.rpMessages) || 0) + 1;
-
-      if (xpGain > 0) {
-        profile.xp = oldXp + xpGain;
-        profile.rpLevel = computeLevelFromXp(profile.xp);
-      }
-
-      if (corruptionGain > 0) {
-        profile.souillure = Math.min(MAX_SOUILLURE || 100, oldCorruption + corruptionGain);
-      }
+      profile.rpLevel = Math.floor(profile.rpMessages / 20) + 1;
+      profile.souillure = Math.min(
+        MAX_SOUILLURE || 100,
+        Number((oldCorruption + gain).toFixed(2))
+      );
 
       const newLevel = Number(profile.rpLevel) || 1;
+      const newStageIndex = getSouillureStageIndex(profile.souillure);
       const newTitles = [];
 
       for (let level = oldLevel + 1; level <= newLevel; level += 1) {
@@ -153,38 +127,49 @@ module.exports = {
 
       await profile.save();
 
-      if (newLevel > oldLevel && xpGain > 0) {
-        const levelEmbed = buildLevelUpEmbed({
-          profile,
-          user: message.author,
-          oldLevel,
-          newLevel,
-          gainedXp: xpGain,
-          totalXp: profile.xp,
-        });
-
+      if (newLevel > oldLevel) {
         await message.channel.send({
           content: `<@${message.author.id}>`,
-          embeds: [levelEmbed],
+          embeds: [
+            buildLevelUpEmbed({
+              profile,
+              user: message.author,
+              oldLevel,
+              newLevel
+            })
+          ]
+        });
+      }
+
+      if (newStageIndex > oldStageIndex) {
+        await message.channel.send({
+          content: `<@${message.author.id}>`,
+          embeds: [
+            buildSouillureStageEmbed({
+              profile,
+              user: message.author,
+              souillure: profile.souillure
+            })
+          ]
         });
       }
 
       for (const entry of newTitles) {
-        const titleEmbed = buildTitleEmbed({
-          profile,
-          user: message.author,
-          level: entry.level,
-          title: entry.title,
-          rarity: entry.rarity,
-        });
-
         await message.channel.send({
           content: `<@${message.author.id}>`,
-          embeds: [titleEmbed],
+          embeds: [
+            buildTitleEmbed({
+              profile,
+              user: message.author,
+              level: entry.level,
+              title: entry.title,
+              rarity: entry.rarity
+            })
+          ]
         });
       }
     } catch (error) {
       console.error('❌ Erreur messageCreate :', error);
     }
-  },
+  }
 };

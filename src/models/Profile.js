@@ -7,8 +7,9 @@ const inventoryItemSchema = new mongoose.Schema(
 
     equipable: { type: Boolean, default: false },
     equipmentSlot: { type: String, default: '' },
+
     icon: { type: String, default: '' },
-    iconUrl: { type: String, default: '' },
+    iconUrl: { type: String, default: '' }
   },
   { _id: true }
 );
@@ -20,11 +21,21 @@ const relationSchema = new mongoose.Schema(
     targetProfileNameSnapshot: { type: String, default: '' },
     type: {
       type: String,
-      enum: ['allie', 'rival', 'famille', 'mentor', 'disciple', 'amour', 'haine', 'neutre', 'autre'],
-      default: 'autre',
+      enum: [
+        'allie',
+        'rival',
+        'famille',
+        'mentor',
+        'disciple',
+        'amour',
+        'haine',
+        'neutre',
+        'autre'
+      ],
+      default: 'autre'
     },
     description: { type: String, default: '' },
-    createdAt: { type: Date, default: Date.now },
+    createdAt: { type: Date, default: Date.now }
   },
   { _id: true }
 );
@@ -32,7 +43,11 @@ const relationSchema = new mongoose.Schema(
 const titleSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
-    rarity: { type: String, enum: ['common', 'rare', 'epic', 'legendary'], default: 'common' },
+    rarity: {
+      type: String,
+      enum: ['common', 'rare', 'epic', 'legendary'],
+      default: 'common'
+    }
   },
   { _id: false }
 );
@@ -52,8 +67,9 @@ const profileSchema = new mongoose.Schema(
 
     location: { type: String, default: 'Aucune' },
 
-    xp: { type: Number, default: 0, min: 0 },
     souillure: { type: Number, default: 0, min: 0, max: 100 },
+
+    wallet: { type: Number, default: 0 },
 
     inventory: { type: [inventoryItemSchema], default: [] },
 
@@ -62,50 +78,50 @@ const profileSchema = new mongoose.Schema(
         inventoryItemId: { type: mongoose.Schema.Types.ObjectId, default: null },
         itemNameSnapshot: { type: String, default: '' },
         icon: { type: String, default: '' },
-        iconUrl: { type: String, default: '' },
+        iconUrl: { type: String, default: '' }
       },
       torse: {
         inventoryItemId: { type: mongoose.Schema.Types.ObjectId, default: null },
         itemNameSnapshot: { type: String, default: '' },
         icon: { type: String, default: '' },
-        iconUrl: { type: String, default: '' },
+        iconUrl: { type: String, default: '' }
       },
       jambes: {
         inventoryItemId: { type: mongoose.Schema.Types.ObjectId, default: null },
         itemNameSnapshot: { type: String, default: '' },
         icon: { type: String, default: '' },
-        iconUrl: { type: String, default: '' },
+        iconUrl: { type: String, default: '' }
       },
       pieds: {
         inventoryItemId: { type: mongoose.Schema.Types.ObjectId, default: null },
         itemNameSnapshot: { type: String, default: '' },
         icon: { type: String, default: '' },
-        iconUrl: { type: String, default: '' },
+        iconUrl: { type: String, default: '' }
       },
       mainDroite: {
         inventoryItemId: { type: mongoose.Schema.Types.ObjectId, default: null },
         itemNameSnapshot: { type: String, default: '' },
         icon: { type: String, default: '' },
-        iconUrl: { type: String, default: '' },
+        iconUrl: { type: String, default: '' }
       },
       mainGauche: {
         inventoryItemId: { type: mongoose.Schema.Types.ObjectId, default: null },
         itemNameSnapshot: { type: String, default: '' },
         icon: { type: String, default: '' },
-        iconUrl: { type: String, default: '' },
+        iconUrl: { type: String, default: '' }
       },
       accessoire1: {
         inventoryItemId: { type: mongoose.Schema.Types.ObjectId, default: null },
         itemNameSnapshot: { type: String, default: '' },
         icon: { type: String, default: '' },
-        iconUrl: { type: String, default: '' },
+        iconUrl: { type: String, default: '' }
       },
       accessoire2: {
         inventoryItemId: { type: mongoose.Schema.Types.ObjectId, default: null },
         itemNameSnapshot: { type: String, default: '' },
         icon: { type: String, default: '' },
-        iconUrl: { type: String, default: '' },
-      },
+        iconUrl: { type: String, default: '' }
+      }
     },
 
     relations: { type: [relationSchema], default: [] },
@@ -114,25 +130,35 @@ const profileSchema = new mongoose.Schema(
     equippedTitle: { type: String, default: '' },
 
     rpMessages: { type: Number, default: 0 },
-    rpLevel: { type: Number, default: 1, min: 1 },
+    rpLevel: { type: Number, default: 1 },
 
     positiveReputation: { type: Number, default: 0 },
     negativeReputation: { type: Number, default: 0 },
+
     reputationHistory: [
       {
-        type: { type: String, enum: ['positive', 'negative'] },
+        type: {
+          type: String,
+          enum: ['positive', 'negative']
+        },
         amount: Number,
         reason: String,
         authorId: String,
-        createdAt: { type: Date, default: Date.now },
-      },
+        createdAt: { type: Date, default: Date.now }
+      }
     ],
 
-    customBackground: { type: String, default: '' },
+    customBackground: { type: String, default: '' }
   },
-  { timestamps: true }
+  {
+    timestamps: true
+  }
 );
 
-profileSchema.index({ guildId: 1, userId: 1, slot: 1 }, { unique: true });
+profileSchema.index(
+  { guildId: 1, userId: 1, slot: 1 },
+  { unique: true }
+);
 
-module.exports = mongoose.models.Profile || mongoose.model('Profile', profileSchema);
+module.exports =
+  mongoose.models.Profile || mongoose.model('Profile', profileSchema);

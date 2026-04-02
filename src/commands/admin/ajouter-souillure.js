@@ -14,7 +14,7 @@ const {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('ajouter-souillure')
-    .setDescription('Ajouter de la souillure à un joueur')
+    .setDescription('Ajouter de la corruption à un joueur')
     .addUserOption(option =>
       option
         .setName('utilisateur')
@@ -24,7 +24,7 @@ module.exports = {
     .addNumberOption(option =>
       option
         .setName('montant')
-        .setDescription('Montant de souillure à ajouter')
+        .setDescription('Montant de corruption à ajouter')
         .setRequired(true)
         .setMinValue(0.1)
         .setMaxValue(100)
@@ -81,9 +81,9 @@ module.exports = {
 
     await interaction.reply({
       content:
-        `🩸 Souillure augmentée pour **${profile.nomPrenom || targetUser.username}** ` +
+        `🩸 Corruption augmentée pour **${profile.nomPrenom || targetUser.username}** ` +
         `(**slot ${slot}**).\n` +
-        `Souillure : **${oldSouillure}%** → **${newSouillure}%**`,
+        `Corruption : **${oldSouillure}%** → **${newSouillure}%**`,
       flags: MessageFlags.Ephemeral
     });
 

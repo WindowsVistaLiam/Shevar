@@ -68,11 +68,11 @@ function buildSouillureStageEmbed({ profile, user, souillure }) {
 
   return new EmbedBuilder()
     .setColor(0xc0392b)
-    .setTitle('🩸 La Souillure évolue')
+    .setTitle('🩸 La Corruption évolue')
     .setDescription(
       `**${profile.nomPrenom || user.username}** franchit un nouveau seuil...\n\n` +
       `**État :** ${stage.label}\n` +
-      `**Souillure :** ${souillure}%`
+      `**Corruption :** ${souillure}%`
     )
     .setThumbnail(profile.imageUrl || user.displayAvatarURL({ dynamic: true }))
     .setImage(stage.gifUrl)
