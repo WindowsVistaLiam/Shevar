@@ -304,26 +304,10 @@ module.exports = function registerRelationInteractions(client) {
 
         await profile.save();
 
-        const totalRelations = profile.relations.length;
-        const totalPages = Math.max(1, Math.ceil(totalRelations / 5));
-
-        const payload = await buildRelationPanel(
-          client,
-          interaction.guildId,
-          interaction.guild,
-          ownerUserId,
-          slot,
-          totalPages
-        );
-
         await interaction.reply({
-          content: 'Relation ajoutée avec succès.',
+          content: 'Relation ajoutée avec succès. Rouvre `/relation` pour voir la liste mise à jour.',
           flags: MessageFlags.Ephemeral,
         });
-
-        if (payload && interaction.message) {
-          await interaction.message.edit(payload).catch(() => {});
-        }
       }
     } catch (error) {
       console.error('❌ Erreur interactions relation :', error);
