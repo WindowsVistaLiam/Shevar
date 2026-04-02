@@ -11,7 +11,6 @@ const registerHelpNavigation = require('./events/registerHelpNavigation');
 const registerRelationInteractions = require('./events/registerRelationInteractions');
 const registerRumorInteractions = require('./events/registerRumorInteractions');
 const registerReputationHistoryNavigation = require('./events/registerReputationHistoryNavigation');
-const registerEquipmentInteractions = require('./events/registerEquipmentInteractions');
 const registerClassementInteractions = require('./events/registerClassementInteractions');
 const registerMapInteractions = require('./events/registerMapInteractions');
 const registerLetterInteractions = require('./events/registerLetterInteractions');
@@ -64,7 +63,6 @@ const excludedEventFiles = new Set([
   'registerRelationInteractions.js',
   'registerRumorInteractions.js',
   'registerReputationHistoryNavigation.js',
-  'registerEquipmentInteractions.js',
   'registerClassementInteractions.js',
   'registerMapInteractions.js',
   'registerLetterInteractions.js',
@@ -95,12 +93,17 @@ registerHelpNavigation(client);
 registerRelationInteractions(client);
 registerRumorInteractions(client);
 registerReputationHistoryNavigation(client);
-registerEquipmentInteractions(client);
 registerClassementInteractions(client);
 registerMapInteractions(client);
 registerLetterInteractions(client);
 
 (async () => {
-  await connectDatabase();
-  await client.login(process.env.DISCORD_TOKEN);
+  try {
+    await connectDatabase();
+    await client.login(process.env.DISCORD_TOKEN);
+    console.log('✅ Bot connecté');
+  } catch (error) {
+    console.error('❌ Erreur au démarrage :', error);
+    process.exit(1);
+  }
 })();
