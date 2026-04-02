@@ -8,36 +8,45 @@ function formatRelationType(type) {
   return String(type);
 }
 
-function getRelationTargetName(relation) {
-  return relation.targetNameSnapshot || 'Inconnu';
+function getRelationTargetName(relation = {}) {
+  return (
+    relation.targetNameSnapshot ||
+    relation.targetProfileNameSnapshot ||
+    `Utilisateur ${relation.targetUserId || 'inconnu'}${relation.targetSlot ? ` • Slot ${relation.targetSlot}` : ''}`
+  );
 }
 
 function getRelationPage(relations = [], page = 1) {
-  const totalPages = Math.max(1, Math.ceil(relations.length / RELATIONS_PER_PAGE));
-  const currentPage = Math.min(Math.max(page, 1), totalPages);
+  const safeRelations = Array.isArray(relations) ? relations : [];
+  const totalPages = Math.max(1, Math.ceil(safeRelations.length / RELATIONS_PER_PAGE));
+  const currentPage = Math.min(Math.max(Number(page) || 1, 1), totalPages);
 
   const start = (currentPage - 1) * RELATIONS_PER_PAGE;
-  const items = relations.slice(start, start + RELATIONS_PER_PAGE);
+  const items = safeRelations.slice(start, start + RELATIONS_PER_PAGE);
 
   return {
     page: currentPage,
     totalPages,
+    totalItems: safeRelations.length,
     items,
   };
 }
 
-function buildRelationListEmbed(profile, ownerUser, guild, pageData) {
-  const { page, totalPages, items } = pageData;
+function buildRelationListEmbed(profile, ownerUser, guild, page = 1) {
+  const pageData = getRelationPage(profile?.relations || [], page);
+  const { items, totalItems, totalPages } = pageData;
 
   const embed = new EmbedBuilder()
     .setColor(0x2b2d31)
     .setTitle(`📇 Relations — ${ownerUser.username}`)
     .setDescription(
-      items.length
+      items.length > 0
         ? items
             .map((relation, index) => {
+              const absoluteIndex = (pageData.page - 1) * RELATIONS_PER_PAGE + index + 1;
+
               return [
-                `**${index + 1}. ${getRelationTargetName(relation)}**`,
+                `**${absoluteIndex}. ${getRelationTargetName(relation)}**`,
                 `Type : ${formatRelationType(relation.type)}`,
                 relation.description ? `Description : ${relation.description}` : null,
               ]
@@ -48,7 +57,7 @@ function buildRelationListEmbed(profile, ownerUser, guild, pageData) {
         : 'Aucune relation enregistrée.'
     )
     .setFooter({
-      text: `${guild?.name || 'Serveur'} • Page ${page}/${totalPages}`,
+      text: `${guild?.name || 'Serveur'} • ${totalItems}/${MAX_RELATIONS_PER_PROFILE} relations • Page ${pageData.page}/${totalPages}`,
     })
     .setTimestamp();
 
