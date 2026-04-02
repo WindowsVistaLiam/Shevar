@@ -20,7 +20,6 @@ const relationSchema = new mongoose.Schema(
     type: { type: String, default: '' },
     description: { type: String, default: '' },
 
-    // Compat ancien système
     targetUserId: { type: String, default: '' },
     targetSlot: { type: Number, default: null },
     targetProfileNameSnapshot: { type: String, default: '' },
@@ -53,7 +52,9 @@ const profileSchema = new mongoose.Schema(
     description: { type: String, default: '' },
     pouvoir: { type: String, default: '' },
     metier: { type: String, default: '' },
+
     imageUrl: { type: String, default: '' },
+    imageUrlPage2: { type: String, default: '' },
 
     location: { type: String, default: 'Aucune' },
 

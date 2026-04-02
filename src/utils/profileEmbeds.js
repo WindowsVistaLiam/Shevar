@@ -159,7 +159,9 @@ function buildProfileEmbed(profile, targetUser, guild, page = 1) {
     return embed;
   }
 
-  return new EmbedBuilder()
+  const page2Image = profile.imageUrlPage2 || profile.imageUrl || '';
+
+  const embed = new EmbedBuilder()
     .setColor(color)
     .setAuthor({
       name: `📚 Détails complémentaires de ${targetUser.username}`,
@@ -182,6 +184,13 @@ function buildProfileEmbed(profile, targetUser, guild, page = 1) {
     )
     .setFooter(baseFooter)
     .setTimestamp();
+
+  if (page2Image) {
+    embed.setThumbnail(page2Image);
+    embed.setImage(page2Image);
+  }
+
+  return embed;
 }
 
 module.exports = {
