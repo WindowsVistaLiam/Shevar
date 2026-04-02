@@ -136,8 +136,8 @@ function buildRelationDetailEmbed(profile, ownerUser, relation, guild) {
 }
 
 module.exports = {
-  RELATIONS_PER_PAGE,
   MAX_RELATIONS_PER_PROFILE,
+  RELATIONS_PER_PAGE,
   formatRelationType,
   getRelationTargetName,
   getRelationPage,

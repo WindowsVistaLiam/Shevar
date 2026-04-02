@@ -1,35 +1,108 @@
 const { EmbedBuilder } = require('discord.js');
+const { getTitleRarityDisplay } = require('./titleUtils');
 
-const MAX_RELATIONS_PER_PROFILE = 50;
-const RELATIONS_PER_PAGE = 5;
-
-function truncate(text, maxLength = 100) {
+function truncate(text, maxLength) {
   if (!text) return 'Non renseigné';
   if (text.length <= maxLength) return text;
   return `${text.slice(0, maxLength - 3)}...`;
 }
 
-function formatRelationType(type = '') {
-  const value = String(type || '').trim();
-  if (!value) return 'Non précisé';
-
-  return value
-    .split(' ')
-    .filter(Boolean)
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
+function buildCorruptionBar(value = 0) {
+  const corruption = Math.max(0, Math.min(100, Number(value) || 0));
+  const filled = Math.round(corruption / 10);
+  const empty = 10 - filled;
+  return `${'█'.repeat(filled)}${'░'.repeat(empty)} ${corruption}%`;
 }
 
-function getRelationTargetName(relation = {}) {
-  if (relation.targetNameSnapshot?.trim()) {
-    return relation.targetNameSnapshot.trim();
+function getCorruptionState(souillure = 0) {
+  if (souillure <= 10) return 'Aucune anomalie perceptible.';
+  if (souillure <= 20) return 'Altération comportementale.';
+  if (souillure <= 30) return 'Altération comportementale brutale.';
+  if (souillure <= 40) return 'Altération comportementale brutale et trace de striure sur le corps.';
+  if (souillure <= 50) return 'Altération comportementale brutale et une partie du corps altérée.';
+  if (souillure <= 60) return 'Altération comportementale brutale et plusieurs parties du corps altérées.';
+  if (souillure <= 70) return 'Perte de lucidité et de la maîtrise de ses actes, altérations profondes sur le corps.';
+  if (souillure <= 80) return 'Perte totale de lucidité et séquelles sur le corps.';
+  if (souillure < 100) return 'Phase de non retour amorcée.';
+  return "La réalité elle-même semble se déformer, ce personnage n'est plus que l'ombre de lui-même.";
+}
+
+function getPresenceText(souillure = 0) {
+  if (souillure <= 20) return 'Présence stable.';
+  if (souillure <= 40) return 'Présence troublante.';
+  if (souillure <= 60) return 'Présence inquiétante.';
+  if (souillure <= 80) return 'Présence oppressante.';
+  return 'Présence anormale et presque insoutenable.';
+}
+
+function getEquippedTitleDisplay(profile) {
+  if (!profile.equippedTitle) return 'Aucun titre équipé';
+  if (!Array.isArray(profile.titles) || profile.titles.length === 0) return profile.equippedTitle;
+
+  const equipped = profile.titles.find(title => {
+    if (typeof title === 'string') return title === profile.equippedTitle;
+    return title.name === profile.equippedTitle;
+  });
+
+  if (!equipped) return profile.equippedTitle;
+  if (typeof equipped === 'string') return getTitleRarityDisplay(equipped, 'common');
+
+  return getTitleRarityDisplay(equipped.name, equipped.rarity || 'common');
+}
+
+function formatRelationType(type = 'autre') {
+  const labels = {
+    allie: 'Allié',
+    rival: 'Rival',
+    famille: 'Famille',
+    mentor: 'Mentor',
+    disciple: 'Disciple',
+    amour: 'Amour',
+    haine: 'Haine',
+    neutre: 'Neutre',
+    autre: 'Autre',
+  };
+
+  return labels[type] || 'Autre';
+}
+
+function buildRelationsSummary(relations = []) {
+  if (!Array.isArray(relations) || relations.length === 0) {
+    return 'Aucune relation connue.';
   }
 
-  if (relation.targetUserId) {
-    return `Utilisateur ${relation.targetUserId}${relation.targetSlot ? ` • Slot ${relation.targetSlot}` : ''}`;
+  const sorted = [...relations].sort(
+    (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
+  );
+
+  const preview = sorted.slice(0, 4).map(relation => {
+    const targetName =
+      relation.targetNameSnapshot ||
+      relation.targetProfileNameSnapshot ||
+      `Utilisateur ${relation.targetUserId || 'inconnu'}${relation.targetSlot ? ` • Slot ${relation.targetSlot}` : ''}`;
+
+    return `• **${formatRelationType(relation.type)}** — ${truncate(targetName, 60)}`;
+  });
+
+  const remaining = sorted.length - preview.length;
+  if (remaining > 0) {
+    preview.push(`• … et **${remaining}** autre(s)`);
   }
 
-  return 'Cible inconnue';
+  return truncate(preview.join('\n'), 1024);
+}
+
+function buildReputationSummary(profile) {
+  const positive = Number(profile.positiveReputation) || 0;
+  const negative = Number(profile.negativeReputation) || 0;
+  const balance = positive - negative;
+  const balanceText = balance > 0 ? `+${balance}` : `${balance}`;
+
+  return [
+    `🌟 **Réputation positive :** ${positive}`,
+    `🕸️ **Réputation négative :** ${negative}`,
+    `⚖️ **Balance :** ${balanceText}`,
+  ].join('\n');
 }
 
 function formatDate(date) {
@@ -39,99 +112,78 @@ function formatDate(date) {
   return parsed.toLocaleString('fr-FR');
 }
 
-function getRelationPage(relations = [], page = 1) {
-  const totalItems = Array.isArray(relations) ? relations.length : 0;
-  const totalPages = Math.max(1, Math.ceil(totalItems / RELATIONS_PER_PAGE));
-  const safePage = Math.max(1, Math.min(totalPages, Number(page) || 1));
-  const start = (safePage - 1) * RELATIONS_PER_PAGE;
-  const items = relations.slice(start, start + RELATIONS_PER_PAGE);
+function getPageColor(page, souillure = 0) {
+  if (page === 1) return 0x3498db;
+  if (page === 2) return 0x9b59b6;
 
-  return {
-    page: safePage,
-    totalPages,
-    totalItems,
-    items,
-  };
+  if (souillure <= 20) return 0x95a5a6;
+  if (souillure <= 40) return 0x8e44ad;
+  if (souillure <= 60) return 0x7d3c98;
+  if (souillure <= 80) return 0xc0392b;
+  return 0x7f0000;
 }
 
-function buildRelationListEmbed(profile, user, guild, page = 1) {
-  const relations = Array.isArray(profile.relations) ? profile.relations : [];
-  const pageData = getRelationPage(relations, page);
+function buildProfileEmbed(profile, targetUser, guild, page = 1) {
+  const souillure = Number(profile.souillure) || 0;
+  const color = getPageColor(page, souillure);
+  const slot = profile.slot || 1;
 
-  const description =
-    pageData.items.length > 0
-      ? pageData.items
-          .map((relation, index) => {
-            const absoluteIndex = (pageData.page - 1) * RELATIONS_PER_PAGE + index + 1;
-            const targetName = getRelationTargetName(relation);
-            const type = formatRelationType(relation.type);
-            const desc = relation.description?.trim()
-              ? truncate(relation.description.trim(), 120)
-              : 'Aucune description';
+  const baseFooter = {
+    text: `${guild?.name || 'Serveur RP'} • Profil de ${targetUser.username} • Slot ${slot} • Page ${page}/2`,
+  };
 
-            return `**${absoluteIndex}.** ${type} — **${targetName}**\n*${desc}*`;
-          })
-          .join('\n\n')
-      : '*Aucune relation enregistrée pour ce profil.*';
+  if (page === 1) {
+    const embed = new EmbedBuilder()
+      .setColor(color)
+      .setAuthor({
+        name: `📘 Dossier de ${targetUser.username}`,
+        iconURL: targetUser.displayAvatarURL({ size: 256 }),
+      })
+      .setTitle(`✨ ${profile.nomPrenom || 'Personnage sans nom'} • Slot ${slot}`)
+      .addFields(
+        { name: '🪪 Identité', value: profile.nomPrenom || 'Non renseigné', inline: false },
+        { name: '👤 Âge / Genre', value: profile.ageGenre || 'Non renseigné', inline: false },
+        { name: '🔮 Pouvoir / Aptitude', value: truncate(profile.pouvoir || 'Non renseigné', 1024), inline: false },
+        { name: '📝 Description', value: truncate(profile.description || 'Aucune description.', 1024), inline: false },
+        { name: '⭐ Réputation', value: buildReputationSummary(profile), inline: false },
+        { name: '💞 Relations', value: buildRelationsSummary(profile.relations || []), inline: false }
+      )
+      .setFooter(baseFooter)
+      .setTimestamp();
+
+    if (profile.imageUrl) {
+      embed.setThumbnail(profile.imageUrl);
+      embed.setImage(profile.imageUrl);
+    }
+
+    return embed;
+  }
 
   return new EmbedBuilder()
-    .setColor(0xe67e22)
-    .setTitle(`💞 Relations de ${profile.nomPrenom || user.username}`)
-    .setDescription(description)
+    .setColor(color)
+    .setAuthor({
+      name: `📚 Détails complémentaires de ${targetUser.username}`,
+      iconURL: targetUser.displayAvatarURL({ size: 256 }),
+    })
+    .setTitle(`🧾 Fiche annexe — ${profile.nomPrenom || targetUser.username} • Slot ${slot}`)
     .addFields(
+      { name: '💼 Métier', value: profile.metier || 'Sans métier', inline: false },
+      { name: '🏅 Titre équipé', value: getEquippedTitleDisplay(profile), inline: false },
+      { name: '☣️ Corruption', value: `${buildCorruptionBar(souillure)}\n${getCorruptionState(souillure)}`, inline: false },
+      { name: '👁️ Présence', value: getPresenceText(souillure), inline: false },
       {
-        name: '📊 Résumé',
+        name: '📂 Archive',
         value: [
-          `**Total :** ${relations.length}/${MAX_RELATIONS_PER_PROFILE}`,
-          `**Page :** ${pageData.page}/${pageData.totalPages}`,
+          `**Créé le :** ${formatDate(profile.createdAt)}`,
+          `**Dernière mise à jour :** ${formatDate(profile.updatedAt)}`,
         ].join('\n'),
         inline: false,
       }
     )
-    .setFooter({
-      text: `${guild?.name || 'Serveur RP'} • Slot ${profile.slot || 1}`,
-    })
-    .setTimestamp();
-}
-
-function buildRelationDetailEmbed(profile, user, relation, guild) {
-  return new EmbedBuilder()
-    .setColor(0xd35400)
-    .setTitle(`🔎 Détail d’une relation — ${profile.nomPrenom || user.username}`)
-    .addFields(
-      {
-        name: '🎯 Cible',
-        value: getRelationTargetName(relation),
-        inline: false,
-      },
-      {
-        name: '🏷️ Type',
-        value: formatRelationType(relation.type),
-        inline: false,
-      },
-      {
-        name: '📝 Description',
-        value: relation.description?.trim() || 'Aucune description',
-        inline: false,
-      },
-      {
-        name: '🗂️ Métadonnées',
-        value: `**Créée le :** ${formatDate(relation.createdAt)}`,
-        inline: false,
-      }
-    )
-    .setFooter({
-      text: `${guild?.name || 'Serveur RP'} • Slot ${profile.slot || 1}`,
-    })
+    .setFooter(baseFooter)
     .setTimestamp();
 }
 
 module.exports = {
-  MAX_RELATIONS_PER_PROFILE,
-  RELATIONS_PER_PAGE,
-  formatRelationType,
-  getRelationTargetName,
-  getRelationPage,
-  buildRelationListEmbed,
-  buildRelationDetailEmbed,
+  buildProfileEmbed,
 };
