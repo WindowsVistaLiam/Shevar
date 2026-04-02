@@ -50,20 +50,17 @@ function getEquippedTitleDisplay(profile) {
   return getTitleRarityDisplay(equipped.name, equipped.rarity || 'common');
 }
 
-function formatRelationType(type = 'autre') {
-  const labels = {
-    allie: 'Allié',
-    rival: 'Rival',
-    famille: 'Famille',
-    mentor: 'Mentor',
-    disciple: 'Disciple',
-    amour: 'Amour',
-    haine: 'Haine',
-    neutre: 'Neutre',
-    autre: 'Autre',
-  };
+function formatRelationType(type = '') {
+  const value = String(type || '').trim();
+  return value || 'Inconnue';
+}
 
-  return labels[type] || 'Autre';
+function getRelationTargetName(relation = {}) {
+  return (
+    relation.targetNameSnapshot ||
+    relation.targetProfileNameSnapshot ||
+    `Utilisateur ${relation.targetUserId || 'inconnu'}${relation.targetSlot ? ` • Slot ${relation.targetSlot}` : ''}`
+  );
 }
 
 function buildRelationsSummary(relations = []) {
@@ -76,12 +73,10 @@ function buildRelationsSummary(relations = []) {
   );
 
   const preview = sorted.slice(0, 4).map(relation => {
-    const targetName =
-      relation.targetNameSnapshot ||
-      relation.targetProfileNameSnapshot ||
-      `Utilisateur ${relation.targetUserId || 'inconnu'}${relation.targetSlot ? ` • Slot ${relation.targetSlot}` : ''}`;
+    const targetName = getRelationTargetName(relation);
+    const relationType = formatRelationType(relation.type);
 
-    return `• **${formatRelationType(relation.type)}** — ${truncate(targetName, 60)}`;
+    return `• **${relationType}** — ${truncate(targetName, 60)}`;
   });
 
   const remaining = sorted.length - preview.length;
@@ -146,6 +141,7 @@ function buildProfileEmbed(profile, targetUser, guild, page = 1) {
         { name: '🔮 Pouvoir / Aptitude', value: truncate(profile.pouvoir || 'Non renseigné', 1024), inline: false },
         { name: '📝 Description', value: truncate(profile.description || 'Aucune description.', 1024), inline: false },
         { name: '⭐ Réputation', value: buildReputationSummary(profile), inline: false },
+        { name: '💞 Relations', value: buildRelationsSummary(profile.relations || []), inline: false }
       )
       .setFooter(baseFooter)
       .setTimestamp();
@@ -172,7 +168,14 @@ function buildProfileEmbed(profile, targetUser, guild, page = 1) {
       { name: '🏅 Titre équipé', value: getEquippedTitleDisplay(profile), inline: false },
       { name: '☣️ Corruption', value: `${buildCorruptionBar(souillure)}\n${getCorruptionState(souillure)}`, inline: false },
       { name: '👁️ Présence', value: getPresenceText(souillure), inline: false },
-      { name: '💞 Relations', value: buildRelationsSummary(profile.relations || []), inline: false }
+      {
+        name: '📂 Archive',
+        value: [
+          `**Créé le :** ${formatDate(profile.createdAt)}`,
+          `**Dernière mise à jour :** ${formatDate(profile.updatedAt)}`,
+        ].join('\n'),
+        inline: false,
+      }
     )
     .setFooter(baseFooter)
     .setTimestamp();
