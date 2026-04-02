@@ -1,4 +1,4 @@
-const { SlashCommandBuilder } = require('discord.js');
+const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const Profile = require('../../models/Profile');
 const { getActiveSlot } = require('../../services/profileService');
 const { getRelationPage, buildRelationListEmbed } = require('../../utils/relationEmbeds');
@@ -15,13 +15,13 @@ module.exports = {
     const profile = await Profile.findOne({
       guildId: interaction.guildId,
       userId: interaction.user.id,
-      slot: activeSlot
+      slot: activeSlot,
     }).lean();
 
     if (!profile) {
       await interaction.reply({
         content: `Tu n’as pas de profil RP dans le **slot ${activeSlot}**.`,
-        ephemeral: true
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -29,6 +29,7 @@ module.exports = {
     const page = 1;
     const pageData = getRelationPage(profile.relations || [], page);
     const embed = buildRelationListEmbed(profile, interaction.user, interaction.guild, page);
+
     const components = buildRelationRows(
       interaction.user.id,
       activeSlot,
@@ -39,7 +40,7 @@ module.exports = {
 
     await interaction.reply({
       embeds: [embed],
-      components
+      components,
     });
-  }
+  },
 };

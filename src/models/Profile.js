@@ -17,13 +17,13 @@ const inventoryItemSchema = new mongoose.Schema(
 const relationSchema = new mongoose.Schema(
   {
     targetNameSnapshot: { type: String, required: true, default: '' },
-
     type: { type: String, default: '' },
     description: { type: String, default: '' },
 
-    // Champs legacy gardés pour compatibilité avec d’anciennes relations
+    // Compat ancien système
     targetUserId: { type: String, default: '' },
     targetSlot: { type: Number, default: null },
+    targetProfileNameSnapshot: { type: String, default: '' },
 
     createdAt: { type: Date, default: Date.now },
   },

@@ -1,33 +1,45 @@
 const { EmbedBuilder } = require('discord.js');
 
-const RELATIONS_PER_PAGE = 5;
 const MAX_RELATIONS_PER_PROFILE = 20;
-const ALLOWED_RELATION_TYPES = ['allie', 'rival', 'famille', 'mentor', 'disciple', 'amour', 'haine', 'neutre', 'autre'];
+const RELATIONS_PER_PAGE = 5;
 
-function truncate(text, maxLength) {
+function truncate(text, maxLength = 100) {
   if (!text) return 'Non renseigné';
   if (text.length <= maxLength) return text;
   return `${text.slice(0, maxLength - 3)}...`;
 }
 
-function formatRelationType(type = 'autre') {
-  const labels = {
-    allie: 'Allié',
-    rival: 'Rival',
-    famille: 'Famille',
-    mentor: 'Mentor',
-    disciple: 'Disciple',
-    amour: 'Amour',
-    haine: 'Haine',
-    neutre: 'Neutre',
-    autre: 'Autre'
-  };
+function formatRelationType(type = '') {
+  const value = String(type || '').trim();
+  if (!value) return 'Non précisé';
 
-  return labels[type] || 'Autre';
+  return value
+    .split(' ')
+    .filter(Boolean)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
+function getRelationTargetName(relation = {}) {
+  if (relation.targetNameSnapshot?.trim()) {
+    return relation.targetNameSnapshot.trim();
+  }
+
+  if (relation.targetProfileNameSnapshot?.trim()) {
+    return relation.targetProfileNameSnapshot.trim();
+  }
+
+  if (relation.targetUserId) {
+    return `Utilisateur ${relation.targetUserId}${relation.targetSlot ? ` • Slot ${relation.targetSlot}` : ''}`;
+  }
+
+  return 'Cible inconnue';
 }
 
 function sortRelations(relations = []) {
-  return [...relations].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+  return [...relations].sort(
+    (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
+  );
 }
 
 function getRelationPage(relations = [], page = 1) {
@@ -35,22 +47,33 @@ function getRelationPage(relations = [], page = 1) {
   const totalPages = Math.max(1, Math.ceil(sorted.length / RELATIONS_PER_PAGE));
   const safePage = Math.max(1, Math.min(totalPages, Number(page) || 1));
   const start = (safePage - 1) * RELATIONS_PER_PAGE;
+
   return {
     totalPages,
     page: safePage,
     items: sorted.slice(start, start + RELATIONS_PER_PAGE),
-    totalItems: sorted.length
+    totalItems: sorted.length,
   };
 }
 
+function formatDate(date) {
+  if (!date) return 'Inconnue';
+  const parsed = new Date(date);
+  if (Number.isNaN(parsed.getTime())) return 'Inconnue';
+  return parsed.toLocaleString('fr-FR');
+}
+
 function buildRelationListEmbed(profile, ownerUser, guild, page = 1) {
-  const { items, totalPages, totalItems, page: safePage } = getRelationPage(profile.relations || [], page);
+  const { items, totalPages, totalItems, page: safePage } = getRelationPage(
+    profile.relations || [],
+    page
+  );
 
   const embed = new EmbedBuilder()
     .setColor(0x5865f2)
     .setAuthor({
       name: `Relations de ${ownerUser.username}`,
-      iconURL: ownerUser.displayAvatarURL({ size: 256 })
+      iconURL: ownerUser.displayAvatarURL({ size: 256 }),
     })
     .setTitle(`${profile.nomPrenom || 'Personnage sans nom'} • Slot ${profile.slot}`)
     .setDescription(
@@ -59,10 +82,7 @@ function buildRelationListEmbed(profile, ownerUser, guild, page = 1) {
         : items
             .map((relation, index) => {
               const absoluteIndex = (safePage - 1) * RELATIONS_PER_PAGE + index + 1;
-              const targetName =
-                relation.targetProfileNameSnapshot ||
-                `Utilisateur ${relation.targetUserId} • Slot ${relation.targetSlot || 1}`;
-
+              const targetName = getRelationTargetName(relation);
               const description = relation.description
                 ? `\n${truncate(relation.description, 120)}`
                 : '';
@@ -72,7 +92,7 @@ function buildRelationListEmbed(profile, ownerUser, guild, page = 1) {
             .join('\n\n')
     )
     .setFooter({
-      text: `${guild?.name || 'Serveur RP'} • ${totalItems}/${MAX_RELATIONS_PER_PROFILE} relations • Page ${safePage}/${totalPages}`
+      text: `${guild?.name || 'Serveur RP'} • ${totalItems}/${MAX_RELATIONS_PER_PROFILE} relations • Page ${safePage}/${totalPages}`,
     })
     .setTimestamp();
 
@@ -80,41 +100,37 @@ function buildRelationListEmbed(profile, ownerUser, guild, page = 1) {
 }
 
 function buildRelationDetailEmbed(profile, ownerUser, relation, guild) {
-  const targetName =
-    relation.targetProfileNameSnapshot ||
-    `Utilisateur ${relation.targetUserId} • Slot ${relation.targetSlot || 1}`;
-
   return new EmbedBuilder()
     .setColor(0x5865f2)
     .setAuthor({
       name: `Relation détaillée de ${ownerUser.username}`,
-      iconURL: ownerUser.displayAvatarURL({ size: 256 })
+      iconURL: ownerUser.displayAvatarURL({ size: 256 }),
     })
     .setTitle(`${profile.nomPrenom || 'Personnage sans nom'} • Slot ${profile.slot}`)
     .addFields(
       {
         name: 'Type',
         value: formatRelationType(relation.type),
-        inline: false
+        inline: false,
       },
       {
-        name: 'Profil ciblé',
-        value: targetName,
-        inline: false
-      },
-      {
-        name: 'Référence',
-        value: `Utilisateur : \`${relation.targetUserId}\`\nSlot : \`${relation.targetSlot}\``,
-        inline: false
+        name: 'Cible',
+        value: getRelationTargetName(relation),
+        inline: false,
       },
       {
         name: 'Description',
         value: relation.description || 'Aucune description.',
-        inline: false
+        inline: false,
+      },
+      {
+        name: 'Créée le',
+        value: formatDate(relation.createdAt),
+        inline: false,
       }
     )
     .setFooter({
-      text: `${guild?.name || 'Serveur RP'} • Relation créée le ${new Date(relation.createdAt || Date.now()).toLocaleString('fr-FR')}`
+      text: guild?.name || 'Serveur RP',
     })
     .setTimestamp();
 }
@@ -122,9 +138,9 @@ function buildRelationDetailEmbed(profile, ownerUser, relation, guild) {
 module.exports = {
   RELATIONS_PER_PAGE,
   MAX_RELATIONS_PER_PROFILE,
-  ALLOWED_RELATION_TYPES,
   formatRelationType,
+  getRelationTargetName,
   getRelationPage,
   buildRelationListEmbed,
-  buildRelationDetailEmbed
+  buildRelationDetailEmbed,
 };
