@@ -1,60 +1,66 @@
 const {
   SlashCommandBuilder,
   EmbedBuilder,
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle
+  AttachmentBuilder,
 } = require('discord.js');
 
-const Profile = require('../../models/Profile');
-const { getActiveSlot } = require('../../services/profileService');
+const { LOCATIONS } = require('../../config/mapLocations');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('map')
-    .setDescription('Afficher la carte et ta position'),
+    .setDescription('Se déplacer sur la carte'),
 
   async execute(interaction) {
-    const slot = await getActiveSlot(interaction.guildId, interaction.user.id);
+    try {
+      // Charger l'image locale
+      const file = new AttachmentBuilder('src/assets/map.png');
 
-    const profile = await Profile.findOne({
-      guildId: interaction.guildId,
-      userId: interaction.user.id,
-      slot
-    });
+      const embed = new EmbedBuilder()
+        .setColor(0x2b2d31)
+        .setTitle('🗺️ Carte de Shevar')
+        .setDescription(
+          "Choisis ta destination à l’aide des boutons ci-dessous.\n" +
+          "Chaque district correspond à une zone distincte de la ville."
+        )
+        .setImage('attachment://map.png') // IMPORTANT
+        .setFooter({
+          text: `${interaction.guild?.name || 'Serveur RP'} • Système de localisation`,
+        })
+        .setTimestamp();
 
-    if (!profile) {
-      return interaction.reply({
-        content: "Profil introuvable.",
-        ephemeral: true
+      // Création des boutons automatiquement depuis LOCATIONS
+      const rows = [];
+      let currentRow = [];
+
+      LOCATIONS.forEach((location, index) => {
+        const { ButtonBuilder, ButtonStyle, ActionRowBuilder } = require('discord.js');
+
+        const button = new ButtonBuilder()
+          .setCustomId(`map:${location}`)
+          .setLabel(location)
+          .setStyle(ButtonStyle.Secondary);
+
+        currentRow.push(button);
+
+        if (currentRow.length === 5 || index === LOCATIONS.length - 1) {
+          rows.push(new ActionRowBuilder().addComponents(currentRow));
+          currentRow = [];
+        }
+      });
+
+      await interaction.reply({
+        embeds: [embed],
+        components: rows,
+        files: [file], // IMPORTANT
+      });
+    } catch (error) {
+      console.error('❌ Erreur commande /map :', error);
+
+      await interaction.reply({
+        content: 'Une erreur est survenue lors de l’affichage de la carte.',
+        ephemeral: true,
       });
     }
-
-    const embed = new EmbedBuilder()
-      .setColor(0xe0b84d)
-      .setTitle('🗺️ Carte du monde')
-      .setDescription([
-        `📍 **Position actuelle :** ${profile.location || 'Aucune'}`,
-        '',
-        'Utilise les boutons pour interagir.'
-      ].join('\n'))
-      .setFooter({ text: 'Système de carte RP' });
-
-    const row = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId(`map:set:${interaction.user.id}`)
-        .setLabel('🌍 Se positionner')
-        .setStyle(ButtonStyle.Primary),
-
-      new ButtonBuilder()
-        .setCustomId(`map:view:${interaction.user.id}`)
-        .setLabel('👀 Voir joueurs')
-        .setStyle(ButtonStyle.Secondary)
-    );
-
-    await interaction.reply({
-      embeds: [embed],
-      components: [row]
-    });
-  }
+  },
 };
