@@ -1,17 +1,18 @@
 const {
   SlashCommandBuilder,
-  PermissionFlagsBits,
   MessageFlags,
-  EmbedBuilder
+  PermissionFlagsBits,
 } = require('discord.js');
+
 const Profile = require('../../models/Profile');
 const { getActiveSlot } = require('../../services/profileService');
 const { isMj } = require('../../utils/profileLimits');
+const { MANUAL_TITLES, getManualTitleByName } = require('../../config/manualTitles');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('retirer-titre')
-    .setDescription('Retirer un titre à un joueur')
+    .setDescription('Retirer un titre autorisé à un joueur')
     .addUserOption(option =>
       option
         .setName('utilisateur')
@@ -21,127 +22,91 @@ module.exports = {
     .addStringOption(option =>
       option
         .setName('titre')
-        .setDescription('Le titre à retirer')
+        .setDescription('Titre à retirer (doit être dans la liste autorisée)')
         .setRequired(true)
-        .setAutocomplete(true)
     )
     .addIntegerOption(option =>
       option
         .setName('slot')
-        .setDescription('Slot du profil (sinon actif)')
+        .setDescription('Le slot ciblé (sinon profil actif)')
         .setRequired(false)
         .setMinValue(1)
         .setMaxValue(10)
     ),
 
-  async autocomplete(interaction) {
-    try {
-      const user = interaction.options.getUser('utilisateur');
-      const focused = interaction.options.getFocused().toLowerCase();
-
-      if (!user) {
-        await interaction.respond([]);
-        return;
-      }
-
-      const slot =
-        interaction.options.getInteger('slot') ||
-        await getActiveSlot(interaction.guildId, user.id);
-
-      const profile = await Profile.findOne({
-        guildId: interaction.guildId,
-        userId: user.id,
-        slot
-      }).lean();
-
-      if (!profile || !profile.titles) {
-        await interaction.respond([]);
-        return;
-      }
-
-      const results = profile.titles
-        .filter(t => t.name.toLowerCase().includes(focused))
-        .slice(0, 25)
-        .map(t => ({
-          name: t.name,
-          value: t.name
-        }));
-
-      await interaction.respond(results);
-    } catch (error) {
-      console.error('❌ autocomplete retirer-titre :', error);
-      await interaction.respond([]);
-    }
-  },
-
   async execute(interaction) {
     const member = interaction.member;
-
     const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
     const mj = isMj(member);
 
     if (!isAdmin && !mj) {
       await interaction.reply({
-        content: 'Tu n’as pas la permission.',
-        flags: MessageFlags.Ephemeral
+        content: "Tu n’as pas la permission d’utiliser cette commande.",
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
 
-    const user = interaction.options.getUser('utilisateur', true);
-    const title = interaction.options.getString('titre', true);
-    const slotOption = interaction.options.getInteger('slot');
+    const targetUser = interaction.options.getUser('utilisateur', true);
+    const titleInput = interaction.options.getString('titre', true);
+    const requestedSlot = interaction.options.getInteger('slot');
+    const slot = requestedSlot || await getActiveSlot(interaction.guildId, targetUser.id);
 
-    const slot = slotOption || await getActiveSlot(interaction.guildId, user.id);
+    const titleData = getManualTitleByName(titleInput);
+
+    if (!titleData) {
+      await interaction.reply({
+        content:
+          'Ce titre n’est pas autorisé.\n\n' +
+          `Titres valides : ${MANUAL_TITLES.map(t => `**${t.name}**`).join(', ')}`,
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
 
     const profile = await Profile.findOne({
       guildId: interaction.guildId,
-      userId: user.id,
-      slot
+      userId: targetUser.id,
+      slot,
     });
 
     if (!profile) {
       await interaction.reply({
-        content: `Profil introuvable (slot ${slot}).`,
-        flags: MessageFlags.Ephemeral
+        content: `Aucun profil trouvé pour **${targetUser.username}** dans le **slot ${slot}**.`,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
 
-    const hasTitle = profile.titles.some(t => t.name === title);
+    const previousLength = (profile.titles || []).length;
 
-    if (!hasTitle) {
+    profile.titles = (profile.titles || []).filter(existing => {
+      if (typeof existing === 'string') {
+        return existing !== titleData.name;
+      }
+
+      return existing.name !== titleData.name;
+    });
+
+    if ((profile.titles || []).length === previousLength) {
       await interaction.reply({
-        content: 'Ce joueur ne possède pas ce titre.',
-        flags: MessageFlags.Ephemeral
+        content: `**${profile.nomPrenom || targetUser.username}** ne possède pas le titre **${titleData.name}**.`,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
 
-    profile.titles = profile.titles.filter(t => t.name !== title);
-
-    if (profile.equippedTitle === title) {
+    if (profile.equippedTitle === titleData.name) {
       profile.equippedTitle = '';
     }
 
     await profile.save();
 
-    const embed = new EmbedBuilder()
-      .setColor(0xe74c3c)
-      .setTitle('❌ Titre retiré')
-      .setDescription(
-        `**${profile.nomPrenom || user.username}** perd le titre :\n\n` +
-        `*${title}*`
-      )
-      .setThumbnail(profile.imageUrl || user.displayAvatarURL({ dynamic: true }))
-      .setFooter({
-        text: `Slot ${slot} • ${user.username}`
-      })
-      .setTimestamp();
-
     await interaction.reply({
-      embeds: [embed],
-      flags: MessageFlags.Ephemeral
+      content:
+        `✅ Le titre **${titleData.name}** a été retiré à **${profile.nomPrenom || targetUser.username}** ` +
+        `(**slot ${slot}**).`,
+      flags: MessageFlags.Ephemeral,
     });
-  }
+  },
 };
