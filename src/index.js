@@ -13,7 +13,6 @@ const registerRumorInteractions = require('./events/registerRumorInteractions');
 const registerReputationHistoryNavigation = require('./events/registerReputationHistoryNavigation');
 const registerClassementInteractions = require('./events/registerClassementInteractions');
 const registerMapInteractions = require('./events/registerMapInteractions');
-const registerLetterInteractions = require('./events/registerLetterInteractions');
 
 const client = new Client({
   intents: [
@@ -65,7 +64,6 @@ const excludedEventFiles = new Set([
   'registerReputationHistoryNavigation.js',
   'registerClassementInteractions.js',
   'registerMapInteractions.js',
-  'registerLetterInteractions.js',
 ]);
 
 const eventsPath = path.join(__dirname, 'events');
@@ -95,7 +93,6 @@ registerRumorInteractions(client);
 registerReputationHistoryNavigation(client);
 registerClassementInteractions(client);
 registerMapInteractions(client);
-registerLetterInteractions(client);
 
 (async () => {
   try {
