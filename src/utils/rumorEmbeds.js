@@ -2,7 +2,7 @@ const { EmbedBuilder } = require('discord.js');
 
 const RUMORS_PER_PAGE = 5;
 const MAX_RUMOR_LENGTH = 500;
-const RUMOR_CHANNEL_ID = '1485843112399077457';
+const RUMOR_CHANNEL_ID = '1490838515578179685';
 
 function truncate(text, maxLength) {
   if (!text) return 'Aucun contenu.';
