@@ -1,6 +1,6 @@
 const { EmbedBuilder } = require('discord.js');
 
-const RUMORS_PER_PAGE = 5;
+const RUMORS_PER_PAGE = 6;
 const MAX_RUMOR_LENGTH = 500;
 const RUMOR_CHANNEL_ID = '1490838515578179685';
 
