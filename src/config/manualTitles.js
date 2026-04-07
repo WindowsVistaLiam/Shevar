@@ -149,6 +149,26 @@ const MANUAL_TITLES = [
     rarity: 'rare',
     description: 'Servir Sa’raoth.',
   },
+    {
+    name: 'Time  Traveler',
+    rarity: 'rare',
+    description: 'Voyager vers une autre ligne temporelle.',
+  },
+  {
+    name: 'Combien de papas ?',
+    rarity: 'rare',
+    description: "Être issu d'un métissage de plus de deux races.",
+  },
+  {
+    name: 'Ggneu gneug bagarre',
+    rarity: 'rare',
+    description: "Gagner un tournois à Shevar, dans sa catégorie.",
+  },
+  { 
+    name: 'Lumière de Shevar',
+    rarity: 'legendary',
+    description: "Gagner un tournois à Shevar, dans sa plus haute difficulté.",
+  },
 ];
 
 function normalizeTitleName(name = '') {
